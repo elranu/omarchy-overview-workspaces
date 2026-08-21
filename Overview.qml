@@ -1,75 +1,199 @@
 pragma ComponentBehavior: Bound
-
+import "."
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Hyprland._GlobalShortcuts 0.0
+import "ColorUtils.js" as ColorUtils
 
 Scope {
-    id: root
+    id: overviewScope
 
-    property bool overviewOpen: false
-    property var workspaceModel: []
-
-    function refresh() {
-        const values = Hyprland.workspaces.values ?? [];
-        root.workspaceModel = values
-            .filter(ws => ws && ws.id > 0 && ws.id < 1000)
-            .sort((a, b) => a.id - b.id);
-    }
-
+    // Omarchy's panel host calls these methods for `shell summon/hide/toggle`.
+    // The original Sumika process drove the same state through its own IPC
+    // handler, so expose the lifecycle explicitly at the plugin boundary.
     function open(payload) {
-        root.overviewOpen = true;
-        root.refresh();
+        GlobalStates.overviewWarmStart = false;
+        GlobalStates.overviewOpen = true;
     }
 
     function close() {
-        root.overviewOpen = false;
+        GlobalStates.overviewOpen = false;
     }
 
     function toggle() {
-        root.overviewOpen = !root.overviewOpen;
-        if (root.overviewOpen) root.refresh();
+        GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
     }
 
-    function focusWorkspace(id) {
-        Hyprland.dispatch(`hl.dsp.focus({ workspace = ${id} })`);
-        root.close();
+    property string lockedScreenName: ""
+    property string overviewFilterQuery: ""
+    property var focusedScreen: Quickshell.screens.find(s => s.name === (overviewScope.lockedScreenName || Hyprland.focusedMonitor?.name))
+        ?? Quickshell.screens[0]
+        ?? null
+
+    signal requestOverviewFocus()
+
+    function navigateOverviewByIndex(delta) {
+        WorkspaceNavigation.navigateByIndex(delta);
     }
 
-    Component.onCompleted: root.refresh()
+    function navigateOverviewGrid(deltaRow, deltaCol) {
+        WorkspaceNavigation.navigateGrid(deltaRow, deltaCol);
+    }
+
+    function queueGrabbedCycle(dir) {
+        OverviewSwitchingController.queueCycle(dir);
+    }
+
+    function queueOverviewFocus() {
+        OverviewSwitchingController.queueFocus();
+    }
+
+    function openGrabbedMode(dir) {
+        OverviewSwitchingController.openGrabbedMode(dir);
+    }
+
+    function commitGrabbedMode() {
+        OverviewSwitchingController.commitGrabbedMode();
+    }
+
+    function overviewNavigationActive() {
+        return OverviewSwitchingController.navigationOpen();
+    }
+
+    function handleOverviewNavigationKey(event) {
+        if (!overviewScope.overviewNavigationActive())
+            return;
+
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+            overviewScope.navigateOverviewGrid(0, -1);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+            overviewScope.navigateOverviewGrid(0, 1);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+            overviewScope.navigateOverviewGrid(-1, 0);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+            overviewScope.navigateOverviewGrid(1, 0);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+            const backward = (event.key === Qt.Key_Backtab) || ((event.modifiers & Qt.ShiftModifier) !== 0);
+            overviewScope.navigateOverviewByIndex(backward ? -1 : 1);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            WorkspaceNavigation.commitSelectedWorkspace(true);
+            GlobalStates.overviewOpen = false;
+            event.accepted = true;
+        }
+    }
+
+    function isFocusedScreen(screen) {
+        return screen?.name === overviewScope.focusedScreen?.name;
+    }
+
+    function currentWorkspaceId() {
+        return WorkspaceNavigation.currentWorkspaceId();
+    }
+
+    // Numeric workspace shortcuts address global visual slots, not raw
+    // Hyprland IDs. Use the same monitor-grouped model rendered by Overview so
+    // numbering continues across monitors. The trailing slot's raw ID may
+    // recycle an empty workspace, so always relocate it to the target monitor
+    // rather than gating on whether it pre-existed.
+    function focusWorkspaceSlot(slot) {
+        if (slot < 1)
+            return;
+
+        let entries = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
+        if (entries.length === 0)
+            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal();
+
+        const entry = entries[slot - 1];
+        if (!entry)
+            return;
+
+        GlobalStates.superReleaseMightTrigger = false;
+        GlobalStates.overviewOpen = false;
+
+        if ((entry.monitorName ?? "").length > 0)
+            Hyprland.dispatch(`hl.dsp.focus({monitor="${entry.monitorName}"})`);
+
+        Hyprland.dispatch(`hl.dsp.focus({ workspace = ${entry.id} })`);
+        if (entry.isTrailingEmpty && (entry.monitorName ?? "").length > 0)
+            Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${entry.id}", monitor = "${entry.monitorName}" })`);
+
+        if (!entry.isTrailingEmpty && ServiceManager.workspace.workspaceHasVisibleWindows(entry.id))
+            GlobalStates.promoteWorkspaceMru(entry.id);
+    }
 
     Connections {
-        target: Hyprland.workspaces
-        function onValuesChanged() { root.refresh(); }
+        target: Hyprland
+        function onFocusedMonitorChanged() {
+            if (GlobalStates.overviewOpen)
+                return;
+            overviewScope.queueOverviewFocus();
+        }
     }
 
-    IpcHandler {
-        target: "hancore.overview-workspaces"
+    Connections {
+        target: GlobalStates
+        function onOverviewOpenChanged() {
+            if (GlobalStates.overviewOpen) {
+                const anchor = Hyprland.focusedMonitor?.name ?? "";
+                overviewScope.lockedScreenName = anchor;
+                GlobalStates.overviewAnchorMonitorName = anchor;
+            } else {
+                overviewScope.lockedScreenName = "";
+                GlobalStates.overviewAnchorMonitorName = "";
+                GlobalStates.overviewPendingWorkspaceMonitorById = ({});
+                GlobalStates.overviewPendingOccupiedWorkspaces = [];
+            }
+        }
+    }
 
-        function open() { root.open(); }
-        function close() { root.close(); }
-        function toggle() { root.toggle(); }
+    // Keep MRU in sync when the user switches workspaces outside of overview
+    // (e.g. via Hyprland keybindings). While overview is open the MRU is frozen.
+    // Empty workspaces (incl. the trailing "New workspace" slot) are never
+    // promoted — only workspaces with windows participate in MRU ordering.
+    Connections {
+        target: ServiceManager.workspace
+        function onActiveWorkspaceChanged() {
+            if (GlobalStates.overviewOpen)
+                return;
+            const wsId = ServiceManager.workspace.activeWorkspace?.id ?? 0;
+            if (wsId > 0 && ServiceManager.workspace.workspaceHasVisibleWindows(wsId))
+                GlobalStates.promoteWorkspaceMru(wsId);
+        }
     }
 
     Variants {
         model: Quickshell.screens
 
-        PanelWindow {
-            id: window
+        LazyLoader {
+            id: overviewPanelLoader
             required property ShellScreen modelData
-            screen: modelData
-            visible: root.overviewOpen
-            color: "transparent"
-            exclusionMode: ExclusionMode.Ignore
+            active: true
 
-            WlrLayershell.namespace: "hancore-overview-workspaces"
+            component: PanelWindow {
+            id: panelWindow
+            screen: overviewPanelLoader.modelData
+            readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
+            readonly property bool isFocusedOverviewWindow: overviewScope.isFocusedScreen(panelWindow.screen)
+            visible: GlobalStates.overviewOpen
+                && (!OverviewSwitchingController.grabbed || panelWindow.isFocusedOverviewWindow)
+
+            WlrLayershell.namespace: "quickshell:overview"
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: root.overviewOpen
-                ? WlrKeyboardFocus.OnDemand
+            WlrLayershell.keyboardFocus: panelWindow.isFocusedOverviewWindow
+                ? (GlobalStates.overviewOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None)
                 : WlrKeyboardFocus.None
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
 
             anchors {
                 top: true
@@ -78,150 +202,431 @@ Scope {
                 right: true
             }
 
-            Rectangle {
-                anchors.fill: parent
-                color: "#cc101218"
+            Connections {
+                target: GlobalStates
+                function onOverviewOpenChanged() {
+                    if (!GlobalStates.overviewOpen) {
+                        const settled = GlobalStates.overviewFocusedWorkspaceId > 0
+                            ? GlobalStates.overviewFocusedWorkspaceId
+                            : overviewScope.currentWorkspaceId();
+                        if (settled > 0 && ServiceManager.workspace.workspaceHasVisibleWindows(settled))
+                            GlobalStates.promoteWorkspaceMru(settled);
+                        OverviewSwitchingController.reset();
+                        GlobalStates.overviewFocusedWorkspaceId = -1;
+                        WorkspaceNavigation.resetOverviewDragState();
+                        GlobalFocusGrab.dismiss();
+                    } else {
+                        GlobalStates.overviewFocusedWorkspaceId = overviewScope.currentWorkspaceId();
+                        if (GlobalStates.overviewWorkspaceMru.length === 0)
+                            GlobalStates.promoteWorkspaceMru(overviewScope.currentWorkspaceId());
+                        if (!OverviewSwitchingController.grabbed || panelWindow.isFocusedOverviewWindow)
+                            GlobalFocusGrab.addDismissable(panelWindow);
+                        overviewScope.queueOverviewFocus();
+                    }
+                }
+            }
 
+            Connections {
+                target: GlobalFocusGrab
+                function onDismissed() {
+                    if (!OverviewSwitchingController.grabbed)
+                        GlobalStates.overviewOpen = false;
+                }
+            }
+
+            implicitWidth: panelWindow.width
+            implicitHeight: panelWindow.height
+
+            // ── Overview (工作区概览): full-screen scrim + large grid ──
+            Rectangle {
+                id: scrim
+                anchors.fill: parent
+                color: ColorUtils.transparentize("#0f0f14", 0.25)
+                visible: GlobalStates.overviewOpen
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                }
+
+                // Click scrim to close
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: root.close()
+                    onClicked: {
+                        if (GlobalStates.overviewSearchMode) {
+                            GlobalStates.overviewSearchMode = false;
+                            overviewScope.overviewFilterQuery = "";
+                        } else {
+                            GlobalStates.overviewOpen = false;
+                        }
+                    }
                 }
             }
 
             Item {
-                id: keyHandler
+                id: overviewKeyHandler
                 anchors.fill: parent
-                focus: root.overviewOpen
+                z: 999
+                focus: panelWindow.isFocusedOverviewWindow
+
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) {
-                        root.close();
+                        if (overviewSearch.menuOpen) {
+                            overviewSearch.menuOpen = false;
+                            event.accepted = true;
+                            return;
+                        }
+                        if (GlobalStates.overviewSearchMode) {
+                            GlobalStates.overviewSearchMode = false;
+                            overviewScope.overviewFilterQuery = "";
+                            event.accepted = true;
+                            return;
+                        }
+                        GlobalStates.overviewOpen = false;
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-                        workspaceGrid.moveCurrentCell(-1, 0);
+                        return;
+                    }
+                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                        const backward = (event.key === Qt.Key_Backtab) || ((event.modifiers & Qt.ShiftModifier) !== 0);
+                        if (OverviewSwitchingController.grabbed) {
+                            overviewScope.queueGrabbedCycle(backward ? -1 : 1);
+                        } else {
+                            overviewScope.navigateOverviewByIndex(backward ? -1 : 1);
+                        }
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                        workspaceGrid.moveCurrentCell(1, 0);
+                        return;
+                    }
+                    if (OverviewSwitchingController.grabbed) {
+                        overviewScope.handleOverviewNavigationKey(event);
+                        return;
+                    }
+                    // ── Search mode keyboard handling (DISABLED: search UI removed) ──
+                    /*
+                    if (GlobalStates.overviewSearchMode) {
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            overviewSearch.activateSelection();
+                            event.accepted = true;
+                            return;
+                        }
+                        if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
+                            const backward = event.key === Qt.Key_Tab
+                                && (event.modifiers & Qt.ShiftModifier) !== 0;
+                            overviewSearch.moveSelection(backward ? -1 : 1);
+                            event.accepted = true;
+                            return;
+                        }
+                        if (event.key === Qt.Key_Up) {
+                            overviewSearch.moveSelection(-1);
+                            event.accepted = true;
+                            return;
+                        }
+                        if (event.key === Qt.Key_Backspace) {
+                            overviewScope.overviewFilterQuery = overviewScope.overviewFilterQuery.slice(0, -1);
+                            event.accepted = true;
+                            return;
+                        }
+                        if (event.key === Qt.Key_Delete) {
+                            overviewScope.overviewFilterQuery = "";
+                            GlobalStates.overviewSearchMode = false;
+                            event.accepted = true;
+                            return;
+                        }
+                        if (event.text.length > 0
+                            && !(event.modifiers & Qt.ControlModifier)
+                            && !(event.modifiers & Qt.AltModifier)
+                            && !(event.modifiers & Qt.MetaModifier)
+                            && event.key !== Qt.Key_Tab) {
+                            overviewScope.overviewFilterQuery += event.text;
+                            event.accepted = true;
+                            return;
+                        }
+                        overviewScope.handleOverviewNavigationKey(event);
+                        return;
+                    }
+                    // In workspace mode, any printable character enters search mode
+                    if (!GlobalStates.overviewSearchMode
+                        && event.text.length > 0
+                        && !(event.modifiers & Qt.ControlModifier)
+                        && !(event.modifiers & Qt.AltModifier)
+                        && !(event.modifiers & Qt.MetaModifier)
+                        && event.key !== Qt.Key_Backspace
+                        && event.key !== Qt.Key_Delete
+                        && event.key !== Qt.Key_Tab
+                        && event.key !== Qt.Key_Space) {
+                        overviewScope.overviewFilterQuery = event.text;
+                        GlobalStates.overviewSearchMode = true;
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        workspaceGrid.moveCurrentCell(0, -1);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        workspaceGrid.moveCurrentCell(0, 1);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                        const ws = workspaceGrid.selectedDelegate?.workspace;
-                        if (ws) root.focusWorkspace(ws.id);
-                        event.accepted = true;
+                        return;
+                    }
+                    */
+                    // Arrow keys navigate workspaces in workspace mode
+                    if (!GlobalStates.overviewSearchMode) {
+                        overviewScope.handleOverviewNavigationKey(event);
                     }
                 }
 
                 Keys.onReleased: event => {
-                    if (event.key === Qt.Key_Super_L || event.key === Qt.Key_Super_R || event.key === Qt.Key_Meta) {
-                        root.close();
+                    if (OverviewSwitchingController.grabbed &&
+                        (event.key === Qt.Key_Super_L || event.key === Qt.Key_Super_R || event.key === Qt.Key_Meta)) {
+                        overviewScope.commitGrabbedMode();
                         event.accepted = true;
                     }
                 }
-            }
 
-            ColumnLayout {
-                anchors.centerIn: parent
-                width: Math.min(parent.width - 96, 1180)
-                spacing: 20
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Workspaces"
-                    color: "#f5f5f5"
-                    font.pixelSize: 30
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
+                Connections {
+                    target: GlobalStates
+                    function onOverviewOpenChanged() {
+                        if (!GlobalStates.overviewOpen) {
+                            GlobalStates.overviewSearchMode = false;
+                            overviewScope.overviewFilterQuery = "";
+                        }
+                        if (GlobalStates.overviewOpen
+                            && panelWindow.isFocusedOverviewWindow
+                            && !OverviewSwitchingController.grabbed
+                            && !GlobalStates.overviewSearchMode)
+                            overviewKeyHandler.forceActiveFocus();
+                    }
+                    function onOverviewSearchModeChanged() {
+                        if (!GlobalStates.overviewSearchMode)
+                            overviewScope.overviewFilterQuery = "";
+                        if (!GlobalStates.overviewSearchMode
+                            && panelWindow.isFocusedOverviewWindow
+                            && GlobalStates.overviewOpen
+                            && !OverviewSwitchingController.grabbed)
+                            Qt.callLater(() => { overviewKeyHandler.forceActiveFocus(); });
+                    }
+                    function onSuperDownChanged() {
+                        if (OverviewSwitchingController.grabbed && !GlobalStates.superDown)
+                            overviewScope.commitGrabbedMode();
+                    }
                 }
 
-                Text {
-                    Layout.fillWidth: true
-                    text: "Select a workspace  ·  Esc to close"
-                    color: "#aeb5c2"
-                    font.pixelSize: 14
-                    horizontalAlignment: Text.AlignHCenter
+                Connections {
+                    target: overviewScope
+                    function onRequestOverviewFocus() {
+                        if (panelWindow.isFocusedOverviewWindow && OverviewSwitchingController.grabbed)
+                            overviewKeyHandler.forceActiveFocus();
+                    }
                 }
 
-                GridView {
-                    id: workspaceGrid
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(560, Math.ceil(count / 4) * 144)
-                    cellWidth: Math.floor(width / 4)
-                    cellHeight: 144
-                    model: root.workspaceModel
-                    clip: true
-                    keyNavigationEnabled: true
-                    highlightFollowsCurrentItem: true
-                    currentIndex: {
-                        const active = Hyprland.focusedWorkspace?.id ?? -1;
-                        return Math.max(0, root.workspaceModel.findIndex(ws => ws.id === active));
+                Connections {
+                    target: OverviewSwitchingController
+                    function onRequestFocus() {
+                        overviewScope.requestOverviewFocus();
                     }
-
-                    property var selectedDelegate: contentItem.children[currentIndex] ?? null
-
-                    function moveCurrentCell(dx, dy) {
-                        if (count === 0) return;
-                        const columns = 4;
-                        const row = Math.floor(currentIndex / columns);
-                        const col = currentIndex % columns;
-                        const nextRow = Math.max(0, row + dy);
-                        const nextCol = Math.max(0, Math.min(columns - 1, col + dx));
-                        currentIndex = Math.max(0, Math.min(count - 1, nextRow * columns + nextCol));
-                    }
-
-                    delegate: Rectangle {
-                        id: card
-                        required property var modelData
-                        readonly property var workspace: modelData
-                        readonly property bool active: Hyprland.focusedWorkspace?.id === workspace.id
-                        readonly property int windowCount: workspace.toplevels?.values?.length ?? 0
-                        width: workspaceGrid.cellWidth - 14
-                        height: workspaceGrid.cellHeight - 14
-                        anchors.margins: 7
-                        radius: 14
-                        color: active ? "#3d5f91" : (mouse.containsMouse ? "#34404f" : "#222a35")
-                        border.width: active ? 3 : 1
-                        border.color: active ? "#8db7ff" : "#495565"
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 8
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: `${card.workspace.id}`
-                                color: "#ffffff"
-                                font.pixelSize: 36
-                                font.bold: true
-                            }
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: card.windowCount === 1 ? "1 window" : `${card.windowCount} windows`
-                                color: "#c4ccd8"
-                                font.pixelSize: 13
-                            }
-                        }
-
-                        MouseArea {
-                            id: mouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: root.focusWorkspace(card.workspace.id)
-                        }
+                    function onGrabbedChanged() {
+                        if (panelWindow.isFocusedOverviewWindow && OverviewSwitchingController.grabbed)
+                            overviewKeyHandler.forceActiveFocus();
                     }
                 }
             }
 
-            onVisibleChanged: {
-                if (visible) {
-                    root.refresh();
-                    Qt.callLater(() => keyHandler.forceActiveFocus());
+            // ── Overview (工作区概览): large workspace grid filling the screen ──
+            Item {
+                id: overviewContainer
+                anchors.fill: parent
+                visible: GlobalStates.overviewOpen
+
+                Loader {
+                    id: overviewLoader
+                    anchors.fill: parent
+                    // Keep the Loader always active so the OverviewWidget tree
+                    // (and all its ScreencopyViews) stays instantiated and holds
+                    // the latest captured frame. This eliminates the
+                    // "wallpaper flash → thumbnail pop" on open: the
+                    // ScreencopyView only starts capturing once it exists, so
+                    // gating the Loader on overviewOpen means the first frame
+                    // isn't ready until a frame or two after open. With live:false
+                    // (performance mode) holding the views costs one snapshot
+                    // each; with live:true Qt only renders visible items, so a
+                    // hidden tree is effectively free. asynchronous:true lets the
+                    // scrim paint while the tree builds the very first time.
+                    asynchronous: true
+                    active: Config?.options.overview.enable ?? true
+                    sourceComponent: OverviewWidget {
+                        screen: panelWindow.screen
+                        searchQuery: ""
+                        visible: GlobalStates.overviewOpen
+                    }
                 }
+
+                OverviewSearch {
+                    id: overviewSearch
+                    anchors.fill: parent
+                    z: 1200
+                    visible: panelWindow.isFocusedOverviewWindow
+                        && !OverviewSwitchingController.grabbed
+                    searchMode: GlobalStates.overviewSearchMode
+                    query: overviewScope.overviewFilterQuery
+
+                    onSearchRequested: {
+                        GlobalStates.overviewSearchMode = true;
+                        overviewKeyHandler.forceActiveFocus();
+                    }
+                    onCloseRequested: {
+                        GlobalStates.overviewSearchMode = false;
+                        overviewScope.overviewFilterQuery = "";
+                    }
+                }
+
+            }
+
+        }
+        }
+    }
+
+    IpcHandler {
+        target: "overview"
+
+        function toggle() {
+            GlobalStates.overviewWarmStart = false;
+            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        }
+        function workspacesToggle() {
+            GlobalStates.overviewWarmStart = false;
+            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        }
+        function close() {
+            GlobalStates.overviewOpen = false;
+        }
+        function open() {
+            GlobalStates.overviewWarmStart = false;
+            GlobalStates.overviewOpen = true;
+        }
+        function toggleReleaseInterrupt() {
+            GlobalStates.superReleaseMightTrigger = false;
+        }
+        function superDown() {
+            GlobalStates.superDown = true;
+            GlobalStates.superReleaseMightTrigger = true;
+        }
+        function superUp() {
+            GlobalStates.superDown = false;
+            if (GlobalStates.overviewWarmStart) {
+                GlobalStates.superReleaseMightTrigger = false;
+                return;
+            }
+            if (GlobalStates.superReleaseMightTrigger) {
+                GlobalStates.superReleaseMightTrigger = false;
+                if (!GlobalStates.overviewOpen)
+                    GlobalStates.overviewOpen = true;
+                else if (GlobalStates.overviewSearchMode) {
+                    GlobalStates.overviewSearchMode = false;
+                    overviewScope.overviewFilterQuery = "";
+                } else if (!OverviewSwitchingController.grabbed)
+                    GlobalStates.overviewOpen = false;
             }
         }
+        function overviewNext() {
+            GlobalStates.superReleaseMightTrigger = false;
+            overviewScope.openGrabbedMode(1);
+        }
+        function overviewPrev() {
+            GlobalStates.superReleaseMightTrigger = false;
+            overviewScope.openGrabbedMode(-1);
+        }
+        function overviewCommit() {
+            GlobalStates.superReleaseMightTrigger = false;
+            overviewScope.commitGrabbedMode();
+        }
+    }
+
+    GlobalShortcut {
+        name: "overviewWorkspacesClose"
+        description: "Closes overview on press"
+
+        onPressed: {
+            GlobalStates.overviewOpen = false;
+        }
+    }
+    GlobalShortcut {
+        name: "overviewWorkspacesToggle"
+        description: "Toggles overview on press"
+
+        onPressed: {
+            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        }
+    }
+    property real lastWheelShortcut: 0
+
+    GlobalShortcut {
+        name: "overviewNext"
+        description: "Workspace overview: cycle next (Win+Tab)"
+        onPressed: {
+            GlobalStates.superReleaseMightTrigger = false;
+            const now = Date.now();
+            if (now - overviewScope.lastWheelShortcut < 150) return;
+            overviewScope.lastWheelShortcut = now;
+            overviewScope.openGrabbedMode(1);
+        }
+    }
+    GlobalShortcut {
+        name: "overviewPrev"
+        description: "Workspace overview: cycle prev (Win+Shift+Tab)"
+        onPressed: {
+            GlobalStates.superReleaseMightTrigger = false;
+            const now = Date.now();
+            if (now - overviewScope.lastWheelShortcut < 150) return;
+            overviewScope.lastWheelShortcut = now;
+            overviewScope.openGrabbedMode(-1);
+        }
+    }
+    GlobalShortcut {
+        name: "overviewCommit"
+        description: "Workspace overview: commit on Win release"
+        onPressed: {
+            GlobalStates.superReleaseMightTrigger = false;
+            overviewScope.commitGrabbedMode()
+        }
+    }
+
+    GlobalShortcut {
+        name: "workspaceSlot1"
+        description: "Focus Overview workspace slot 1"
+        onPressed: overviewScope.focusWorkspaceSlot(1)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot2"
+        description: "Focus Overview workspace slot 2"
+        onPressed: overviewScope.focusWorkspaceSlot(2)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot3"
+        description: "Focus Overview workspace slot 3"
+        onPressed: overviewScope.focusWorkspaceSlot(3)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot4"
+        description: "Focus Overview workspace slot 4"
+        onPressed: overviewScope.focusWorkspaceSlot(4)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot5"
+        description: "Focus Overview workspace slot 5"
+        onPressed: overviewScope.focusWorkspaceSlot(5)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot6"
+        description: "Focus Overview workspace slot 6"
+        onPressed: overviewScope.focusWorkspaceSlot(6)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot7"
+        description: "Focus Overview workspace slot 7"
+        onPressed: overviewScope.focusWorkspaceSlot(7)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot8"
+        description: "Focus Overview workspace slot 8"
+        onPressed: overviewScope.focusWorkspaceSlot(8)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot9"
+        description: "Focus Overview workspace slot 9"
+        onPressed: overviewScope.focusWorkspaceSlot(9)
+    }
+    GlobalShortcut {
+        name: "workspaceSlot10"
+        description: "Focus Overview workspace slot 10"
+        onPressed: overviewScope.focusWorkspaceSlot(10)
     }
 }
