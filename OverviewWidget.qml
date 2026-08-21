@@ -717,9 +717,11 @@ Item {
                                 left: parent.left
                                 margins: 8
                             }
-                            text: workspace.isPendingOccupied
-                                ? "Moving…"
-                                : String(workspace.globalSlot)
+                            text: workspace.isTrailingEmpty
+                                ? "New workspace"
+                                : workspace.isPendingOccupied
+                                    ? "Moving…"
+                                    : String(workspace.globalSlot)
                             font {
                                 pixelSize: Appearance.font.pixelSize.smaller
                                 weight: Font.Medium

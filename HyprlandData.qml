@@ -311,6 +311,30 @@ Singleton {
 
         const ordered = orderedWindows.slice();
 
+        // Keep one creation target at the very end, as in the original
+        // Overview. It must not reuse 1..5, because those empty workspaces
+        // are intentionally shown to match Omarchy's bar.
+        const usedIds = root.systemWorkspaceIds();
+        for (const workspace of root.workspaces) {
+            const id = Number(workspace?.id ?? -1);
+            if (id > 0 && id <= 100 && !usedIds.includes(id))
+                usedIds.push(id);
+        }
+        const pendingIds = Object.keys(GlobalStates.overviewPendingWorkspaceMonitorById ?? {})
+            .map(id => Number(id));
+        let trailingId = Math.max(5, ...usedIds, ...pendingIds) + 1;
+        while (trailingId <= 100 && usedIds.includes(trailingId))
+            trailingId += 1;
+        if (trailingId <= 100) {
+            ordered.push({
+                id: trailingId,
+                monitorName: targetMonitor || monitorData?.name || root.monitors[0]?.name || "",
+                monitorIndex: 0,
+                monitorLabel: targetMonitor,
+                isTrailingEmpty: true
+            });
+        }
+
         return ordered;
     }
 
