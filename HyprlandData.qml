@@ -201,6 +201,7 @@ Singleton {
     function overviewWorkspaceEntriesForMonitor(monitorName, appendTrailing, reservedWorkspaceIds, orderByMru) {
         const useMruOrder = orderByMru ?? false;
         const targetMonitor = monitorName ?? "";
+        const useSystemOrder = GlobalStates.overviewSortMode !== "legacy";
         const monitorData = targetMonitor
             ? root.monitors.find(mon => (mon.name ?? "") === targetMonitor)
             : null;
@@ -213,14 +214,22 @@ Singleton {
         // Only workspaces with visible windows participate in the grid.
         // Hyprland may keep real empty workspaces around after cross-monitor
         // moves; those are handled as the single trailing slot below.
-        const regularWorkspaces = root.systemWorkspaceIds().map(id => {
-            const live = root.workspaceById[id];
-            return live ?? {
-                id,
-                name: String(id),
-                monitor: targetMonitor || root.monitors[0]?.name || ""
-            };
-        });
+        const regularWorkspaces = useSystemOrder
+            ? root.systemWorkspaceIds().map(id => {
+                const live = root.workspaceById[id];
+                return live ?? {
+                    id,
+                    name: String(id),
+                    monitor: targetMonitor || root.monitors[0]?.name || ""
+                };
+            })
+            : root.workspaces
+                .filter(ws => root.isRegularWorkspace(ws))
+                .filter(ws => ws.id >= 1 && ws.id <= 100)
+                .filter(ws => !targetMonitor || root.workspaceMonitorName(ws) === targetMonitor)
+                .filter(ws => !root.suppressedEmptyWorkspaceIds().includes(ws.id))
+                .filter(ws => root.workspaceHasVisibleWindows(ws.id))
+                .sort((a, b) => a.id - b.id);
 
         const seen = {};
         const withWindows = [];
@@ -283,7 +292,11 @@ Singleton {
 
         // Normal Overview follows the same numeric order as the Omarchy bar.
         // The transient Win+Tab switcher may still opt into MRU ordering.
-        const orderedIds = withWindows.map(entry => entry.id).sort((a, b) => a - b);
+        const orderedIds = useSystemOrder
+            ? withWindows.map(entry => entry.id).sort((a, b) => a - b)
+            : (targetMonitor.length > 0
+                ? WorkspaceOrder.orderIdsForMonitor(targetMonitor, withWindows.map(entry => entry.id))
+                : withWindows.map(entry => entry.id).sort((a, b) => a - b));
         const entriesById = ({});
         for (const entry of withWindows)
             entriesById[entry.id] = entry;
@@ -314,7 +327,7 @@ Singleton {
         // Keep one creation target at the very end, as in the original
         // Overview. It must not reuse 1..5, because those empty workspaces
         // are intentionally shown to match Omarchy's bar.
-        const usedIds = root.systemWorkspaceIds();
+        const usedIds = useSystemOrder ? root.systemWorkspaceIds() : [];
         for (const workspace of root.workspaces) {
             const id = Number(workspace?.id ?? -1);
             if (id > 0 && id <= 100 && !usedIds.includes(id))
@@ -322,8 +335,13 @@ Singleton {
         }
         const pendingIds = Object.keys(GlobalStates.overviewPendingWorkspaceMonitorById ?? {})
             .map(id => Number(id));
-        let trailingId = Math.max(5, ...usedIds, ...pendingIds) + 1;
-        while (trailingId <= 100 && usedIds.includes(trailingId))
+        const usedIdSet = ({});
+        for (const id of usedIds)
+            usedIdSet[id] = true;
+        let trailingId = useSystemOrder
+            ? Math.max(5, ...usedIds, ...pendingIds) + 1
+            : WorkspaceOrder.allocateId(usedIdSet, {});
+        while (useSystemOrder && trailingId <= 100 && usedIds.includes(trailingId))
             trailingId += 1;
         if (trailingId <= 100) {
             ordered.push({

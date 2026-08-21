@@ -7,8 +7,16 @@
   "license": "MIT",
   "description": "A Win-key workspace overview inspired by oh-my-desktop.",
   "keepLoaded": true,
-  "kinds": ["panel"],
+  "kinds": ["panel", "bar-widget"],
   "entryPoints": {
-    "panel": "Overview.qml"
+    "panel": "Overview.qml",
+    "barWidget": "bar/widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Overview order",
+    "description": "Choose the workspace overview ordering algorithm.",
+    "category": "Desktop",
+    "allowMultiple": false,
+    "defaultSection": "left"
   }
 }

@@ -20,6 +20,7 @@ Singleton {
     property bool overviewOpen: false
     property string overviewAnchorMonitorName: ""
     property bool overviewSearchMode: false
+    property string overviewSortMode: "system"
     property int overviewFocusedWorkspaceId: -1
     property var overviewWorkspaceMru: []
     property int overviewDraggingFromWorkspace: -1
