@@ -25,6 +25,10 @@ Scope {
         if (root.open) root.refresh();
     }
 
+    function close() {
+        root.open = false;
+    }
+
     function focusWorkspace(id) {
         Hyprland.dispatch(`hl.dsp.focus({ workspace = ${id} })`);
         root.open = false;
@@ -100,7 +104,7 @@ Scope {
                         workspaceGrid.moveCurrentCell(0, 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                        const ws = workspaceGrid.currentItem?.workspace;
+                        const ws = workspaceGrid.selectedDelegate?.workspace;
                         if (ws) root.focusWorkspace(ws.id);
                         event.accepted = true;
                     }
@@ -151,7 +155,7 @@ Scope {
                         return Math.max(0, root.workspaceModel.findIndex(ws => ws.id === active));
                     }
 
-                    property Item currentItem: contentItem.children[currentIndex] ?? null
+                    property Item selectedDelegate: contentItem.children[currentIndex] ?? null
 
                     function moveCurrentCell(dx, dy) {
                         if (count === 0) return;
