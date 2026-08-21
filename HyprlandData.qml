@@ -183,12 +183,14 @@ Singleton {
             root.clientsLoaded && root.monitorsLoaded && root.workspacesLoaded);
     }
 
-    // Keep the first five cards identical to Omarchy's bar widget, then show
-    // every real positive Hyprland workspace, including ids above 10. The
-    // stock bar only paints 6..10, but Hyprland itself has no ten-workspace
+    // Keep Omarchy's complete default workspace strip: 1..10 are always
+    // available, including empty slots, then show every real positive
+    // Hyprland workspace above 10. Hyprland itself has no ten-workspace
     // limit and Overview must not hide windows moved to 11+.
     function systemWorkspaceIds() {
-        const ids = [1, 2, 3, 4, 5];
+        const ids = [];
+        for (let id = 1; id <= 10; ++id)
+            ids.push(id);
         for (const workspace of root.workspaces) {
             const id = Number(workspace?.id ?? -1);
             if (id > 0 && id <= 100 && !ids.includes(id))
