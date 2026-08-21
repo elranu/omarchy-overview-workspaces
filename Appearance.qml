@@ -1,17 +1,18 @@
 pragma Singleton
 import QtQuick
-import "." as Local
+import qs.Commons
 
 QtObject {
     readonly property QtObject colors: QtObject {
-        property color colLayer1: "#22252b"
-        property color colLayer1Hover: "#30343c"
-        property color colLayer2: "#2c3038"
-        property color colLayer2Hover: "#3a404b"
-        property color colLayer2Active: "#4b596e"
-        property color colOnLayer1: "#f2f4f7"
-        property color colSurfaceContainerLow: "#20242a"
-        property color colSurfaceContainer: "#272c34"
+        // Keep the overview surfaces on Omarchy's active theme palette.
+        property color colLayer1: Color.background
+        property color colLayer1Hover: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+        property color colLayer2: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
+        property color colLayer2Hover: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+        property color colLayer2Active: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.22)
+        property color colOnLayer1: Color.foreground
+        property color colSurfaceContainerLow: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
+        property color colSurfaceContainer: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
     }
     readonly property QtObject font: QtObject {
         readonly property QtObject pixelSize: QtObject {
@@ -21,9 +22,9 @@ QtObject {
         }
     }
     readonly property QtObject rounding: QtObject {
-        property int small: 12
-        property int large: 20
-        property int verysmall: 6
+        property int small: 0
+        property int large: 0
+        property int verysmall: 0
     }
     readonly property QtObject animation: QtObject {
         readonly property QtObject elementMoveEnter: QtObject {

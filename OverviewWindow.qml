@@ -116,10 +116,10 @@ Item { // Window
     height: targetWindowHeight
     opacity: 1
 
-    property real topLeftRadius
-    property real topRightRadius
-    property real bottomLeftRadius
-    property real bottomRightRadius
+    property real topLeftRadius: 0
+    property real topRightRadius: 0
+    property real bottomLeftRadius: 0
+    property real bottomRightRadius: 0
     // Rounded-corner masking via layer+OpacityMask adds an offscreen render
     // pass per window. Keep it in balanced/visuals modes for the frosted
     // rounded look; in performance mode skip it (square previews) to avoid
@@ -157,28 +157,24 @@ Item { // Window
     ScreencopyView {
         id: windowPreview
         anchors.fill: parent
-        // Keep captureSource always bound to the toplevel so the preview
-        // already holds the latest frame the instant the overview opens —
-        // gating on overviewOpen means the first frame isn't captured until
-        // open, causing a visible "black box → thumbnail" pop. With live:false
-        // (performance mode) this is cheap: one snapshot kept around; with
-        // live:true (balanced/visuals) the stream resumes naturally once the
-        // item becomes visible (Qt only renders visible items).
+        // Keep the capture stream alive for every workspace window. The
+        // overview is expected to show window thumbnails immediately, even
+        // when the shell is using its performance profile; using a gated
+        // single-frame capture made thumbnails appear only after hover.
         captureSource: root.toplevel
-        live: !root.perfMode
+        live: true
 
-        // In performance mode (live:false) the ScreencopyView captures one
-        // frame at creation and never refreshes — so a long-closed overview
-        // would show a stale thumbnail. Refresh a single frame the instant
-        // the overview opens so the cached image is replaced with the current
-        // window contents. (live:true modes auto-capture on visible, so skip.)
+        // Also request an immediate frame when the overview opens. This
+        // avoids waiting for the first live-stream tick after a long close.
         Connections {
             target: GlobalStates
             function onOverviewOpenChanged() {
-                if (GlobalStates.overviewOpen && root.perfMode && windowPreview.live === false)
+                if (GlobalStates.overviewOpen)
                     windowPreview.captureFrame()
             }
         }
+
+        Component.onCompleted: windowPreview.captureFrame()
 
         // Color overlay for interactions
         Rectangle {
@@ -233,7 +229,7 @@ Item { // Window
             }
             width: windowIcon.width
             height: windowIcon.height
-            radius: Math.max(4, width * 0.18)
+            radius: 0
             color: ColorUtils.transparentize(TuiStyle.accent, 0.25)
 
             StyledText {

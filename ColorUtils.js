@@ -1,6 +1,8 @@
 function transparentize(color, amount) {
     var c = Qt.color(color)
-    return Qt.rgba(c.r, c.g, c.b, Math.max(0, Math.min(1, 1 - Number(amount || 0))))
+    var percentage = amount === undefined ? 1 : Number(amount)
+    percentage = Math.max(0, Math.min(1, percentage))
+    return Qt.rgba(c.r, c.g, c.b, c.a * (1 - percentage))
 }
 
 function mix(a, b, amount) {

@@ -6,6 +6,7 @@
   "author": "HANCORE",
   "license": "MIT",
   "description": "A Win-key workspace overview inspired by oh-my-desktop.",
+  "keepLoaded": true,
   "kinds": ["panel"],
   "entryPoints": {
     "panel": "Overview.qml"

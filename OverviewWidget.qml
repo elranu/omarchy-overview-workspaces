@@ -163,8 +163,9 @@ Item {
 
     property real scale: workspaceImplicitWidth / screenW
 
-    property real largeWorkspaceRadius: Appearance.rounding.large
-    property real smallWorkspaceRadius: Appearance.rounding.verysmall
+    // Omarchy's current decoration:rounding is 0; keep the overview flat too.
+    property real largeWorkspaceRadius: 0
+    property real smallWorkspaceRadius: 0
 
     property int workspaceZ: 0
     property int windowZ: 1
@@ -598,7 +599,7 @@ Item {
                 y: root.groupY(modelData)
                 width: root.groupWidth(modelData)
                 height: root.groupHeight(modelData)
-                radius: root.largeWorkspaceRadius + 12
+                radius: 0
                 color: TuiStyle.bg
                 border.width: focusedGroup ? 2 : 1
                 border.color: focusedGroup
@@ -660,7 +661,9 @@ Item {
                     property bool hoveredWhileDragging: false
 
                     readonly property bool isFocused: workspaceValue === root.highlightedWorkspaceId
-                    readonly property int globalSlot: root.globalSlotForWorkspaceId(workspace.workspaceValue)
+                    // This is the real Hyprland workspace number, not a
+                    // separate Overview slot number.
+                    readonly property int globalSlot: workspace.workspaceValue
 
                     x: root.entryX(index)
                     y: root.entryY(index)
@@ -691,6 +694,11 @@ Item {
                         }
 
                         // Wallpaper background for all workspaces (including trailing empty)
+                        Rectangle {
+                            anchors.fill: parent
+                            color: Appearance.colors.colSurfaceContainer
+                        }
+
                         Image {
                             id: workspaceWallpaper
 
@@ -700,6 +708,7 @@ Item {
                             asynchronous: false
                             cache: true
                             mipmap: true
+                            opacity: 0.26
                         }
 
                         StyledText {
@@ -708,11 +717,9 @@ Item {
                                 left: parent.left
                                 margins: 8
                             }
-                            text: workspace.isTrailingEmpty
-                                ? "New workspace"
-                                : workspace.isPendingOccupied
-                                    ? "Moving…"
-                                : `${workspace.monitorName || "Hidden"} · Slot ${workspace.globalSlot > 0 ? workspace.globalSlot : "?"}`
+                            text: workspace.isPendingOccupied
+                                ? "Moving…"
+                                : String(workspace.globalSlot)
                             font {
                                 pixelSize: Appearance.font.pixelSize.smaller
                                 weight: Font.Medium
@@ -955,12 +962,11 @@ Item {
                     border.width: isFocusedEntry ? 3 : 2
                     border.color: isFocusedEntry ? root.activeBorderColor : TuiStyle.inactiveBorder
 
-                    // The number shown here is the same global visual slot
-                    // addressed by Super+1…0. Raw Hyprland IDs are transport
-                    // identifiers (intentionally sparse, recycled) and are not
-                    // shown to the user.
+                    // Workspace identity is represented by its position and
+                    // the system workspace number in the card itself. Do not
+                    // add a second, plugin-specific Slot badge here.
                     Rectangle {
-                        visible: slotLabel.globalSlot > 0
+                        visible: false
                         anchors {
                             top: parent.top
                             right: parent.right
@@ -969,7 +975,7 @@ Item {
                         }
                         width: slotLabel.implicitWidth + 20
                         height: 34
-                        radius: 5
+                        radius: 0
                         color: TuiStyle.bg
                         border.width: 1
                         border.color: workspaceBorder.isFocusedEntry
@@ -979,7 +985,7 @@ Item {
                         StyledText {
                             id: slotLabel
                             anchors.centerIn: parent
-                            readonly property int globalSlot: root.globalSlotForWorkspaceId(workspaceBorder.modelData.id)
+                            readonly property int globalSlot: workspaceBorder.modelData.id
                             text: globalSlot > 0
                                 ? `Slot ${globalSlot}`
                                 : ""

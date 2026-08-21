@@ -183,20 +183,24 @@ Singleton {
             root.clientsLoaded && root.monitorsLoaded && root.workspacesLoaded);
     }
 
-    // Overview (工作区概览): only workspaces WITH windows are shown. Normal
-    // Overview follows WorkspaceOrder's persisted visual order; raw Hyprland
-    // IDs are transport identifiers rather than presentation positions.
-    // SUPER+number resolves visual slots dynamically. Win+Tab switching can
-    // explicitly request MRU ordering (Win11 Alt+Tab Z-order). Empty workspaces are never displayed
-    // — not even the active one if it has no windows. A single trailing
-    // "New workspace" slot is always appended last and never participates in
-    // ordering, like GNOME/macOS. Its raw ID comes from the global recyclable
-    // pool and therefore need not be numerically larger than occupied IDs.
+    // Keep the overview model identical to Omarchy's bar widget: fixed
+    // workspaces 1..5 plus any live workspaces 6..10, including empty ones.
+    // Card positions are the Hyprland workspace numbers; there is no separate
+    // visual Slot/MRU ordering in the normal overview.
+    function systemWorkspaceIds() {
+        const ids = [1, 2, 3, 4, 5];
+        for (const workspace of root.workspaces) {
+            const id = Number(workspace?.id ?? -1);
+            if (id > 0 && id <= 10 && !ids.includes(id))
+                ids.push(id);
+        }
+        ids.sort((a, b) => a - b);
+        return ids;
+    }
+
     function overviewWorkspaceEntriesForMonitor(monitorName, appendTrailing, reservedWorkspaceIds, orderByMru) {
-        const includeTrailing = appendTrailing ?? true;
         const useMruOrder = orderByMru ?? false;
         const targetMonitor = monitorName ?? "";
-        const reservedIds = reservedWorkspaceIds ?? {};
         const monitorData = targetMonitor
             ? root.monitors.find(mon => (mon.name ?? "") === targetMonitor)
             : null;
@@ -209,14 +213,14 @@ Singleton {
         // Only workspaces with visible windows participate in the grid.
         // Hyprland may keep real empty workspaces around after cross-monitor
         // moves; those are handled as the single trailing slot below.
-        const suppressed = root.suppressedEmptyWorkspaceIds();
-        const regularWorkspaces = root.workspaces
-            .filter(ws => root.isRegularWorkspace(ws))
-            .filter(ws => ws.id >= 1 && ws.id <= 100)
-            .filter(ws => !targetMonitor || root.workspaceMonitorName(ws) === targetMonitor)
-            .filter(ws => !suppressed.includes(ws.id))
-            .filter(ws => root.workspaceHasVisibleWindows(ws.id))
-            .sort((a, b) => a.id - b.id);
+        const regularWorkspaces = root.systemWorkspaceIds().map(id => {
+            const live = root.workspaceById[id];
+            return live ?? {
+                id,
+                name: String(id),
+                monitor: targetMonitor || root.monitors[0]?.name || ""
+            };
+        });
 
         const seen = {};
         const withWindows = [];
@@ -277,11 +281,9 @@ Singleton {
             });
         });
 
-        // Normal Overview follows persistent visual order. Only the transient
-        // Win+Tab switcher opts into MRU ordering.
-        const orderedIds = targetMonitor.length > 0
-            ? WorkspaceOrder.orderIdsForMonitor(targetMonitor, withWindows.map(entry => entry.id))
-            : withWindows.map(entry => entry.id).sort((a, b) => a - b);
+        // Normal Overview follows the same numeric order as the Omarchy bar.
+        // The transient Win+Tab switcher may still opt into MRU ordering.
+        const orderedIds = withWindows.map(entry => entry.id).sort((a, b) => a - b);
         const entriesById = ({});
         for (const entry of withWindows)
             entriesById[entry.id] = entry;
@@ -308,55 +310,6 @@ Singleton {
         }
 
         const ordered = orderedWindows.slice();
-
-        const globalSeen = {};
-        // Trailing "New workspace" slot: show exactly one empty workspace at
-        // the visual end of each monitor group. The globally unique candidate
-        // may recycle a low raw ID; array position, not ID magnitude, makes it
-        // the final visual slot.
-        // Only occupied workspaces, pending targets, and each monitor's
-        // active workspace are unavailable to the allocator. Empty non-active
-        // Hyprland workspaces are recyclable: moving a window into one reuses
-        // its ID instead of creating a new one, which is what stops the
-        // maxId+1 ratchet that otherwise climbs toward the 100 ceiling.
-        for (let i = 0; i < root.monitors.length; ++i) {
-            const activeId = root.monitors[i]?.activeWorkspace?.id ?? -1;
-            if (activeId >= 1 && activeId <= 100)
-                globalSeen[activeId] = true;
-        }
-        withWindows.forEach(e => {
-            globalSeen[e.id] = true;
-        });
-        for (const win of root.windowList) {
-            const workspaceId = win?.workspace?.id ?? -1;
-            if (workspaceId >= 1 && workspaceId <= 100)
-                globalSeen[workspaceId] = true;
-        }
-        const pendingMonitorMap = GlobalStates.overviewPendingWorkspaceMonitorById ?? {};
-        for (const key of Object.keys(pendingMonitorMap)) {
-            const workspaceId = Number(key);
-            if (workspaceId >= 1 && workspaceId <= 100)
-                globalSeen[workspaceId] = true;
-        }
-        for (const pending of GlobalStates.overviewPendingOccupiedWorkspaces ?? []) {
-            const workspaceId = pending?.id ?? -1;
-            if (workspaceId >= 1 && workspaceId <= 100)
-                globalSeen[workspaceId] = true;
-        }
-
-        const trailingId = includeTrailing
-            ? WorkspaceOrder.allocateId(globalSeen, reservedIds)
-            : -1;
-        if (trailingId >= 1 && !seen[trailingId]) {
-            ordered.push({
-                id: trailingId,
-                monitorName: targetMonitor,
-                monitorIndex: 0,
-                monitorLabel: targetMonitor,
-                existingWorkspace: globalSeen[trailingId] ?? false,
-                isTrailingEmpty: true
-            });
-        }
 
         return ordered;
     }
@@ -397,9 +350,6 @@ Singleton {
                 entries[j].groupEnd = j === entries.length - 1;
                 all.push(entries[j]);
             }
-            const trailing = entries.find(e => e.isTrailingEmpty);
-            if (trailing)
-                reservedIds[trailing.id] = true;
         }
         if (all.length === 0)
             return root.overviewWorkspaceEntriesGlobal();
