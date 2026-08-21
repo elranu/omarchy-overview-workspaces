@@ -14,6 +14,7 @@
 - 每个显示器保留一个 trailing empty 新工作区
 - Hyprland 工作区数据刷新、拖拽中的 pending 状态和窗口地址映射
 - `WorkspaceOrder` 持久化工作区视觉顺序，并回收可复用的 Hyprland ID
+- Original 模式下 Win+数字按视觉槽位切换，而不是直接按 Hyprland 原始 ID 切换
 
 ## 安装
 
@@ -26,6 +27,23 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 ```sh
 omarchy-shell shell summon hancore.overview-workspaces '{}'
 ```
+
+如果要启用 Original 模式的 `Win+1`、`Win+2` 等动态槽位，需要将下面片段加入
+用户的 `~/.config/hypr/bindings.lua`，并执行 `hyprctl reload`：
+
+```lua
+for slot = 1, 10 do
+  local key = "code:" .. tostring(slot + 9)
+  hl.unbind("SUPER + " .. key)
+  hl.bind("SUPER + " .. key,
+    hl.dsp.global("quickshell:workspaceSlot" .. tostring(slot)), {
+      description = "Switch to workspace slot " .. tostring(slot)
+    })
+end
+```
+
+该绑定调用插件提供的 `workspaceSlot1` 到 `workspaceSlot10` 全局快捷键；
+System 模式也通过同一入口解析原生空白槽位。
 
 ## 结构
 
