@@ -10,7 +10,7 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
-    property bool open: false
+    property bool overviewOpen: false
     property var workspaceModel: []
 
     function refresh() {
@@ -20,18 +20,23 @@ Scope {
             .sort((a, b) => a.id - b.id);
     }
 
-    function toggle() {
-        root.open = !root.open;
-        if (root.open) root.refresh();
+    function open(payload) {
+        root.overviewOpen = true;
+        root.refresh();
     }
 
     function close() {
-        root.open = false;
+        root.overviewOpen = false;
+    }
+
+    function toggle() {
+        root.overviewOpen = !root.overviewOpen;
+        if (root.overviewOpen) root.refresh();
     }
 
     function focusWorkspace(id) {
         Hyprland.dispatch(`hl.dsp.focus({ workspace = ${id} })`);
-        root.open = false;
+        root.close();
     }
 
     Component.onCompleted: root.refresh()
@@ -44,8 +49,8 @@ Scope {
     IpcHandler {
         target: "hancore.overview-workspaces"
 
-        function open() { root.open = true; root.refresh(); }
-        function close() { root.open = false; }
+        function open() { root.open(); }
+        function close() { root.close(); }
         function toggle() { root.toggle(); }
     }
 
@@ -56,13 +61,13 @@ Scope {
             id: window
             required property ShellScreen modelData
             screen: modelData
-            visible: root.open
+            visible: root.overviewOpen
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
 
             WlrLayershell.namespace: "hancore-overview-workspaces"
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: root.open
+            WlrLayershell.keyboardFocus: root.overviewOpen
                 ? WlrKeyboardFocus.OnDemand
                 : WlrKeyboardFocus.None
 
@@ -86,7 +91,7 @@ Scope {
             Item {
                 id: keyHandler
                 anchors.fill: parent
-                focus: root.open
+                focus: root.overviewOpen
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) {
                         root.close();
