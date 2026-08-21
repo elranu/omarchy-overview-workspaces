@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "hancore.overview-workspaces",
+  "name": "Overview Workspaces",
+  "version": "0.1.0",
+  "author": "HANCORE",
+  "license": "MIT",
+  "description": "A Win-key workspace overview inspired by oh-my-desktop.",
+  "kinds": ["panel"],
+  "entryPoints": {
+    "panel": "Overview.qml"
+  }
+}
