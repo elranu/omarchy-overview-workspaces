@@ -183,15 +183,15 @@ Singleton {
             root.clientsLoaded && root.monitorsLoaded && root.workspacesLoaded);
     }
 
-    // Keep the overview model identical to Omarchy's bar widget: fixed
-    // workspaces 1..5 plus any live workspaces 6..10, including empty ones.
-    // Card positions are the Hyprland workspace numbers; there is no separate
-    // visual Slot/MRU ordering in the normal overview.
+    // Keep the first five cards identical to Omarchy's bar widget, then show
+    // every real positive Hyprland workspace, including ids above 10. The
+    // stock bar only paints 6..10, but Hyprland itself has no ten-workspace
+    // limit and Overview must not hide windows moved to 11+.
     function systemWorkspaceIds() {
         const ids = [1, 2, 3, 4, 5];
         for (const workspace of root.workspaces) {
             const id = Number(workspace?.id ?? -1);
-            if (id > 0 && id <= 10 && !ids.includes(id))
+            if (id > 0 && id <= 100 && !ids.includes(id))
                 ids.push(id);
         }
         ids.sort((a, b) => a - b);
@@ -338,8 +338,15 @@ Singleton {
         const usedIdSet = ({});
         for (const id of usedIds)
             usedIdSet[id] = true;
+        for (const id of pendingIds) {
+            if (id > 0 && id <= 100) {
+                usedIdSet[id] = true;
+                if (!usedIds.includes(id))
+                    usedIds.push(id);
+            }
+        }
         let trailingId = useSystemOrder
-            ? Math.max(5, ...usedIds, ...pendingIds) + 1
+            ? root.allocateSystemTrailingWorkspaceId(usedIdSet)
             : WorkspaceOrder.allocateId(usedIdSet, {});
         while (useSystemOrder && trailingId <= 100 && usedIds.includes(trailingId))
             trailingId += 1;
@@ -354,6 +361,24 @@ Singleton {
         }
 
         return ordered;
+    }
+
+    // Omarchy's stock bar has room for live ids 6..10. Reuse the first empty
+    // one before creating 11+, while still allowing and displaying any
+    // already-existing workspace above 10.
+    function allocateSystemTrailingWorkspaceId(usedIdSet) {
+        for (let id = 6; id <= 10; id++) {
+            if (!usedIdSet[id])
+                return id;
+        }
+
+        let highest = 10;
+        for (const key of Object.keys(usedIdSet)) {
+            const id = Number(key);
+            if (id > highest && id <= 100)
+                highest = id;
+        }
+        return highest + 1;
     }
 
     function overviewWorkspaceEntriesGlobal(orderByMru) {
