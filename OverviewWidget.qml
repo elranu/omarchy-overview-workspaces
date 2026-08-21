@@ -661,9 +661,14 @@ Item {
                     property bool hoveredWhileDragging: false
 
                     readonly property bool isFocused: workspaceValue === root.highlightedWorkspaceId
-                    // This is the real Hyprland workspace number, not a
-                    // separate Overview slot number.
-                    readonly property int globalSlot: workspace.workspaceValue
+                    // In Original mode the Hyprland ID is only an internal
+                    // transport key. The original Overview displayed the
+                    // workspace's visual slot (1, 2, 3, ...). System mode
+                    // keeps the real IDs so its empty slots remain aligned
+                    // with Omarchy's native workspace bar.
+                    readonly property int globalSlot: GlobalStates.overviewSortMode === "legacy"
+                        ? root.globalSlotForWorkspaceId(workspace.workspaceValue)
+                        : workspace.workspaceValue
 
                     x: root.entryX(index)
                     y: root.entryY(index)

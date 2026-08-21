@@ -15,6 +15,7 @@ BarWidget {
         : false
 
     readonly property string targetMonitorName: Hyprland.focusedMonitor?.name ?? ""
+    readonly property bool legacySort: Local.GlobalStates.overviewSortMode === "legacy"
     readonly property var workspaceIds: {
         const mode = Local.GlobalStates.overviewSortMode;
         const all = Hyprland.workspaces.values
@@ -92,13 +93,20 @@ BarWidget {
 
             WidgetButton {
                 required property int modelData
+                required property int index
                 readonly property bool focused: Hyprland.focusedWorkspace?.id === modelData
                 readonly property var workspace: Local.HyprlandData.workspaceById[modelData]
                 readonly property bool occupied: !!workspace
                     && Local.HyprlandData.workspaceHasVisibleWindows(modelData)
 
                 bar: root.bar
-                text: focused ? "\uDB85\uDCFB" : (modelData === 10 ? "0" : String(modelData))
+                // Original mode uses visual slots, while System mode mirrors
+                // the native bar's actual workspace numbers.
+                text: focused
+                    ? "\uDB85\uDCFB"
+                    : root.legacySort
+                        ? String(index + 1)
+                        : (modelData === 10 ? "0" : String(modelData))
                 opacity: occupied || focused ? 1 : 0.5
                 horizontalMargin: 6
                 verticalPadding: 6
