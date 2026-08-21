@@ -1,8 +1,10 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
+import ".." as Local
 
 BarWidget {
     id: root
@@ -12,13 +14,34 @@ BarWidget {
         ? settingsPanelLoader.item.opened === true
         : false
 
+    readonly property string targetMonitorName: Hyprland.focusedMonitor?.name ?? ""
+    readonly property var workspaceIds: {
+        const mode = Local.GlobalStates.overviewSortMode;
+        const all = Hyprland.workspaces.values
+            .map(workspace => Number(workspace.id))
+            .filter(id => id > 0 && id <= 100);
+        if (mode !== "legacy")
+            return Local.HyprlandData.systemWorkspaceIds();
+
+        const occupied = all.filter(id => {
+            const workspace = Local.HyprlandData.workspaceById[id];
+            return workspace && Local.HyprlandData.workspaceHasVisibleWindows(id)
+                && (!root.targetMonitorName
+                    || Local.HyprlandData.workspaceMonitorName(workspace) === root.targetMonitorName);
+        });
+        return Local.WorkspaceOrder.orderIdsForMonitor(root.targetMonitorName, occupied);
+    }
+
     function applySettings() {
-        // The overview singleton is initialized by SettingsPanel.qml. The
-        // bar widget itself only owns the persisted settings entry.
+        Local.GlobalStates.overviewSortMode = setting("sortMode", "system") === "legacy"
+            ? "legacy" : "system";
     }
     function open() { if (settingsPanelLoader.item) settingsPanelLoader.item.open(); }
     function close() { if (settingsPanelLoader.item) settingsPanelLoader.item.close(); }
     function toggle() { if (settingsPanelLoader.item) settingsPanelLoader.item.toggle(); }
+    function focusWorkspace(id) {
+        Hyprland.dispatch(`hl.dsp.focus({ workspace = "${id}" })`);
+    }
     function injectPanel() {
         if (!settingsPanelLoader.item) return;
         settingsPanelLoader.item.bar = root.bar;
@@ -27,7 +50,7 @@ BarWidget {
         settingsPanelLoader.item.hostWidget = root;
     }
 
-    implicitWidth: button.implicitWidth
+    implicitWidth: workspaceRow.implicitWidth + button.implicitWidth
     implicitHeight: button.implicitHeight
     onBarChanged: injectPanel()
     onSettingsChanged: { applySettings(); injectPanel(); }
@@ -43,21 +66,46 @@ BarWidget {
         onLoaded: { root.injectPanel(); Qt.callLater(root.injectPanel); }
     }
 
-    IpcHandler {
-        target: "hancore.overview-workspaces"
-        function open(): void { root.open() }
-        function close(): void { root.close() }
-        function toggle(): void { root.toggle() }
-    }
-
     WidgetButton {
         id: button
-        anchors.fill: parent
+        anchors.left: workspaceRow.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: implicitWidth
+        height: parent.height
         bar: root.bar
         text: "󰒓"
         tooltipText: "Overview workspace order"
         onPressed: function(buttonCode) {
             if (buttonCode === Qt.LeftButton) root.toggle();
+        }
+    }
+
+    Row {
+        id: workspaceRow
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
+        spacing: Style.space(1)
+
+        Repeater {
+            model: root.workspaceIds
+
+            WidgetButton {
+                required property int modelData
+                readonly property bool focused: Hyprland.focusedWorkspace?.id === modelData
+                readonly property var workspace: Local.HyprlandData.workspaceById[modelData]
+                readonly property bool occupied: !!workspace
+                    && Local.HyprlandData.workspaceHasVisibleWindows(modelData)
+
+                bar: root.bar
+                text: focused ? "\uDB85\uDCFB" : (modelData === 10 ? "0" : String(modelData))
+                opacity: occupied || focused ? 1 : 0.5
+                horizontalMargin: 6
+                verticalPadding: 6
+                fixedWidth: Style.space(20)
+                fixedHeight: root.barSize
+                onPressed: root.focusWorkspace(modelData)
+            }
         }
     }
 }
