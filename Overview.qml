@@ -155,7 +155,7 @@ Scope {
                         return Math.max(0, root.workspaceModel.findIndex(ws => ws.id === active));
                     }
 
-                    property Item selectedDelegate: contentItem.children[currentIndex] ?? null
+                    property var selectedDelegate: contentItem.children[currentIndex] ?? null
 
                     function moveCurrentCell(dx, dy) {
                         if (count === 0) return;
