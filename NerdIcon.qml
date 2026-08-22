@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 
 Text {
     id: root
@@ -27,7 +28,10 @@ Text {
     horizontalAlignment: Text.AlignHCenter
     verticalAlignment: Text.AlignVCenter
     font {
-        family: "JetBrainsMono Nerd Font"
+        // Follow Omarchy's configured font alias. The default Omarchy font
+        // includes the Nerd Font glyphs, while custom font themes can still
+        // provide their own compatible icon font through the same setting.
+        family: Style.fontFamily
         pixelSize: root.iconSize
     }
 }
