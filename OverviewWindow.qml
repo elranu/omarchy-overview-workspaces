@@ -232,11 +232,10 @@ Item { // Window
             radius: 0
             color: ColorUtils.transparentize(TuiStyle.accent, 0.25)
 
-            StyledText {
+            NerdIcon {
                 anchors.centerIn: parent
-                text: (windowData?.class || windowData?.title || "?").charAt(0).toUpperCase()
-                font.pixelSize: Math.max(10, parent.height * 0.45)
-                font.weight: Font.DemiBold
+                symbol: "apps"
+                iconSize: Math.max(16, parent.height * 0.45)
                 color: TuiStyle.fg
             }
         }
