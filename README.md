@@ -4,7 +4,7 @@
 
 ## 功能
 
-- Win 键释放打开/关闭 Overview
+- 插件自动注册单独 Win 按下/释放，打开/关闭 Overview
 - Win+Tab / Win+Shift+Tab 进入 MRU 工作区切换模式
 - 工作区分组、多显示器布局，并与 Omarchy 顶栏保持一致的工作区编号顺序（含空工作区）
 - 使用 `ScreencopyView` 显示每个窗口的实时缩略图
