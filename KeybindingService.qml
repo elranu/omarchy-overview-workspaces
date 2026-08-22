@@ -54,6 +54,13 @@ Item {
 
         // Both modes need the interrupt guard so Win+application shortcuts do
         // not accidentally toggle Overview when Win is released.
+        // keyd presents a remapped CapsLock as a real Ctrl modifier.  Keep an
+        // exact Ctrl+Super interrupt ahead of the legacy ignore_mods rule;
+        // otherwise the generic Super+X rule can win and open Overview for a
+        // shortcut that is meant for another service (for example Voxtype).
+        for (const key of root.interruptKeys)
+            commands.push(`hyprctl eval 'hl.bind("SUPER + CTRL + ${key}", hl.dsp.global("quickshell:superInterrupt"), { non_consuming = true, transparent = true, description = "Overview Ctrl+Super interrupt" })' >/dev/null 2>&1 || true`);
+
         for (const key of root.interruptKeys)
             commands.push(`hyprctl eval 'hl.bind("SUPER + ${key}", hl.dsp.global("quickshell:superInterrupt"), { ignore_mods = true, non_consuming = true, transparent = true, description = "Overview Super interrupt" })' >/dev/null 2>&1 || true`);
 

@@ -59,7 +59,8 @@ Panel {
 
             Column {
                 id: content
-                width: parent.width
+                anchors.left: parent.left
+                anchors.right: parent.right
                 spacing: Style.space(10)
 
                 Text {
@@ -72,6 +73,8 @@ Panel {
 
                 Text {
                     text: "Choose the plugin's optimized order or Omarchy's native order."
+                    width: parent.width
+                    wrapMode: Text.Wrap
                     color: Color.muted
                     font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: Style.font.body
@@ -86,7 +89,7 @@ Panel {
                     delegate: Rectangle {
                         required property var modelData
                         width: content.width
-                        height: Style.space(58)
+                        height: optionColumn.implicitHeight + Style.space(16)
                         color: GlobalStates.overviewSortMode === modelData.key
                             ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.18)
                             : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.06)
@@ -94,11 +97,14 @@ Panel {
                         border.color: GlobalStates.overviewSortMode === modelData.key ? Color.accent : Color.muted
 
                         Column {
+                            id: optionColumn
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             spacing: Style.space(2)
                             Text {
                                 text: modelData.title
+                                width: parent.width
+                                wrapMode: Text.Wrap
                                 color: root.barForeground
                                 font.family: root.bar ? root.bar.fontFamily : Style.font.family
                                 font.pixelSize: Style.font.body
@@ -106,6 +112,8 @@ Panel {
                             }
                             Text {
                                 text: modelData.detail
+                                width: parent.width
+                                wrapMode: Text.Wrap
                                 color: Color.muted
                                 font.family: root.bar ? root.bar.fontFamily : Style.font.family
                                 font.pixelSize: Style.font.caption
