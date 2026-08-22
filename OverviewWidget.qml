@@ -1065,32 +1065,26 @@ Item {
                         mipmap: true
                     }
 
-                    MaterialSymbol {
+                    NerdIcon {
                         anchors.centerIn: parent
                         visible: (!selectionInfoBar.showingWorkspaceInfo
                             || !selectionInfoBar.infoEntry?.isTrailingEmpty)
                             && (selectionInfoBar.showingWorkspaceInfo || selectionInfoBar.infoIconSource.length === 0)
-                        text: selectionInfoBar.showingWorkspaceInfo ? "select_window" : "apps"
+                        symbol: selectionInfoBar.showingWorkspaceInfo ? "select_window" : "apps"
                         iconSize: 26
                         color: selectionInfoBar.showingWorkspaceInfo && selectionInfoBar.infoEntry?.isTrailingEmpty
                             ? TuiStyle.accent
                             : Appearance.colors.colOnLayer1
                     }
 
-                    // Omarchy's Nerd Font plus glyph. The old port passed the
-                    // literal word "add" to a plain Text fallback, so the
-                    // workspace creation card displayed English text instead
-                    // of an icon.
-                    Text {
+                    // Omarchy's Nerd Font plus glyph for workspace creation.
+                    NerdIcon {
                         anchors.centerIn: parent
                         visible: selectionInfoBar.showingWorkspaceInfo
                             && selectionInfoBar.infoEntry?.isTrailingEmpty
-                        text: "\uDB80\uDC2F" // NerdIconMap.add (mdi-plus)
+                        symbol: "add"
                         color: TuiStyle.accent
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 26
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        iconSize: 26
                     }
                 }
 

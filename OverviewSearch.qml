@@ -198,8 +198,8 @@ Item {
                 anchors.rightMargin: 12
                 spacing: 10
 
-                MaterialSymbol {
-                    text: root.commandMode ? "terminal" : "search"
+                NerdIcon {
+                    symbol: root.commandMode ? "terminal" : "search"
                     iconSize: 19
                     color: root.searchMode ? TuiStyle.accent : TuiStyle.dim
                 }
@@ -244,9 +244,9 @@ Item {
             border.width: root.menuOpen ? 2 : 1
             border.color: root.menuOpen ? TuiStyle.controlActiveBorder : TuiStyle.menuBorder
 
-            MaterialSymbol {
+            NerdIcon {
                 anchors.centerIn: parent
-                text: "menu"
+                symbol: "menu"
                 iconSize: 21
                 color: root.menuOpen ? TuiStyle.accent : TuiStyle.fg
             }
@@ -474,8 +474,8 @@ Item {
             anchors.rightMargin: 11
             spacing: 11
 
-            MaterialSymbol {
-                text: menuItem.symbol
+            NerdIcon {
+                symbol: menuItem.symbol
                 iconSize: 19
                 color: TuiStyle.fg
             }
@@ -533,9 +533,9 @@ Item {
                     visible: status === Image.Ready
                 }
 
-                MaterialSymbol {
+                NerdIcon {
                     anchors.centerIn: parent
-                    text: row.symbol
+                    symbol: row.symbol
                     iconSize: 21
                     color: row.selected ? TuiStyle.accent : TuiStyle.dim
                     visible: row.iconSource.length === 0
