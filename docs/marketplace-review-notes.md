@@ -29,23 +29,23 @@
 - 审核人 ryanrhughes（collaborator）：`HyprlandData.qml:557-573`、`OverviewWidget.qml`
   的窗口标题/类名经 `StyledText`（默认 `Text.AutoText`）渲染，本地应用可用 markup 形状
   的标题在常驻 shell 里触发富文本资源加载。
-- 已修：`594826a` StyledText 改 `Text.PlainText`。HEAD 即此 commit，待维护者复核。
+- 已修：`594826a` StyledText 改 `Text.PlainText`。2026-08-22 深查结论见下节。
 
-## 四、本仓库对照自查要点（侦察发现，复审重点）
+## 四、本仓库对照自查要点（2026-08-22 深查）
 
-- [ ] **PlainText 覆盖面**：#1401 判例点名的是 StyledText；需确认所有直接渲染
-      `hyprctl clients/workspaces/activewindow` 字段的 Text 元素（不止 StyledText）
-      都不会回落到 AutoText——审核人复核时会全文件扫。
-- [ ] **service 入口的 bash -lc 动态拼装 hyprctl eval 字符串**（KeybindingService.qml，
-      约 130+ 条 hl.bind/hl.unbind 一次性下发）：当前拼接内容为常量故安全，但模式上
-      属「字符串拼命令」，任何未来插值都会变成注入点。建议加注释声明不变量或改列表传参。
-- [ ] **Sumika 血统残留引用已损坏**：OverviewSearch.qml:86-119 引用
-      `sumika-detach`/`sumika-restart`/`apps/sumika-bar`、WorkspaceNavigation.qml:26-31
-      引用 `bin/sumika-applauncher`——这些二进制在本机不存在，对应功能实际不可用。
-      上架后用户会当 bug 反馈；要么实现要么删功能入口。
-- [ ] **workspace-order.json 写入门控依赖 `SUMIKA_APP_DIR` 环境变量且无锁**：
-      isWriter 判定与旧命名强耦合，多实例并发写靠约定。建议换成插件自身 id 派生的显式开关。
-- [ ] Wallpaper.qml 每 5s 无条件轮询 readlink；Config.qml `arbitraryRaceConditionDelay=50`
-      魔数；Persistent.qml 死代码——不影响过审但属质量噪音。
+- [x] **PlainText 覆盖面**：全文件核查完毕，所有渲染 hyprctl 标题/类名/标签的点都经
+      StyledText（PlainText）；裸 `text:` 绑定均为内部常量。
+- [x] **service 入口 bash -lc 拼装**：已在 `bindingScript` 前声明注入不变量
+      （只允许常量表与整数插值），当前内容全部为常量。
+- [x] **Sumika 移植残留清理**：会话菜单/重载 Shell（后端二进制不存在）整体删除；
+      `>command` 模式改用系统自带 `xdg-terminal-exec` 直接派生（保留功能、去
+      `sumika-detach`）；trailing 工作区回车启动器行为移除（无替代二进制），仅保留聚焦；
+      `Directories.root` 死属性删除，`sumikaStateHome` 更名 `stateHome`。
+- [x] **workspace-order.json 写入门控修复**：Omarchy shell 从不设置 `SUMIKA_APP_DIR`，
+      原 isWriter 判定恒 false，排序持久化从未写入。现未设置该变量即视为本插件持有写权，
+      保留上游 Sumika 环境下的原有选举语义。
+- [x] Wallpaper 轮询改为仅概览可见时运行，打开瞬间额外刷新一次。
+- [x] Persistent.qml 经核实**并非死代码**（OverviewWindow.qml:127 在消费），保留；
+      Config.qml `arbitraryRaceConditionDelay=50` 为既有时序参数，不动。
 - [x] 无 pkexec/sudo/keyd 类特权面；hyprctl 全部用户态 detached 运行。
-- [ ] 无测试目录——#1428 的修复能被接受很快，部分原因是带了回归测试。
+- [ ] 无测试目录——#1428 带回归测试的修复被接受最快，建议后续补关键路径测试。

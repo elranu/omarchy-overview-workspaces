@@ -23,12 +23,6 @@ Singleton {
                 refreshAfterDragTimer.restart();
         }
     }
-    function openAppLauncher() {
-        var rootDir = FileUtils.trimFileProtocol(Directories.root)
-        Quickshell.execDetached([
-            rootDir + "/bin/sumika-applauncher", "open"
-        ]);
-    }
     function overviewModel() {
         if (OverviewSwitchingController.grabbed)
             return switchingModeModel();
@@ -142,16 +136,13 @@ Singleton {
             Hyprland.dispatch(`hl.dsp.focus({monitor="${monitorName}"})`);
     }
 
-    function commitSelectedWorkspace(openLauncherOnTrailing) {
-        const openLauncher = openLauncherOnTrailing ?? false;
+    function commitSelectedWorkspace() {
         if (root.focusedEntryIsTrailingEmpty()) {
             const entry = root.focusedEntry();
             root.focusMonitorForEntry(entry);
             Hyprland.dispatch(`hl.dsp.focus({ workspace = ${entry.id} })`);
             if ((entry?.monitorName ?? "").length > 0)
                 Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${entry.id}", monitor = "${entry.monitorName}" })`);
-            if (openLauncher)
-                root.openAppLauncher();
             return;
         }
 

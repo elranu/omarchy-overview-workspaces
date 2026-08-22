@@ -35,6 +35,11 @@ Item {
         return "";
     }
 
+    // Injection invariant: every value interpolated into these strings comes
+    // from the constant tables above (interruptKeys) or plain integers. The
+    // result runs through `bash -lc` and Hyprland's Lua eval, so never feed
+    // external data (window titles, user input, config strings) in here.
+    // Keep the command list assembly that way.
     function bindingScript(optimized) {
         const commands = [];
         const unbindOverview = "hyprctl eval 'hl.unbind(\"SUPER_L\"); hl.unbind(\"SUPER_R\"); hl.unbind(\"SUPER + SUPER_L\"); hl.unbind(\"SUPER + SUPER_R\"); hl.unbind(\"SUPER + TAB\"); hl.unbind(\"SUPER + SHIFT + TAB\")' >/dev/null 2>&1 || true";

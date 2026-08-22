@@ -86,12 +86,13 @@ Item {
     function executeCommand() {
         if (commandText.length === 0)
             return;
-        const detach = FileUtils.trimFileProtocol(`${Directories.root}/bin/sumika-detach`);
+        // xdg-terminal-exec is the freedesktop terminal dispatcher present on
+        // Omarchy; execDetached keeps the terminal alive after the overview
+        // closes without a vendor-specific wrapper binary.
         Quickshell.execDetached([
-            detach,
             "xdg-terminal-exec",
-            "--app-id=io.github.iamcheyan.sumika.overviewcommand",
-            "--title=Sumika Command",
+            "--app-id=hancore.overview-workspaces.command",
+            "--title=Overview Command",
             "--hold",
             "-e",
             "bash",
@@ -99,23 +100,6 @@ Item {
             commandText
         ]);
         GlobalStates.overviewOpen = false;
-    }
-
-    function requestSessionAction(action, label) {
-        menuOpen = false;
-        GlobalStates.overviewOpen = false;
-        const barApp = FileUtils.trimFileProtocol(`${Directories.root}/apps/sumika-bar`);
-        Quickshell.execDetached([
-            "qs", "-p", barApp, "ipc", "call", "session", "confirm", action, label
-        ]);
-    }
-
-    function reloadShell() {
-        menuOpen = false;
-        GlobalStates.overviewOpen = false;
-        Quickshell.execDetached([
-            `${Directories.root}/bin/sumika-restart`
-        ]);
     }
 
     function activateSelection() {
@@ -158,169 +142,6 @@ Item {
     onTotalResultsChanged: clampSelection()
     onQueryChanged: selectedIndex = 0
 
-    // ── Search box + quick-action button (disabled per request) ──
-    /*
-    MouseArea {
-        anchors.fill: parent
-        z: 10
-        visible: root.menuOpen
-        onClicked: root.menuOpen = false
-    }
-
-    Item {
-        id: searchHeader
-        anchors {
-            top: parent.top
-            topMargin: 24
-            horizontalCenter: parent.horizontalCenter
-        }
-        width: Math.min(620, Math.max(420, root.width - 96))
-        height: 46
-        z: 12
-
-        Rectangle {
-            id: searchField
-            anchors {
-                top: parent.top
-                bottom: parent.bottom
-                left: parent.left
-                right: menuButton.left
-                rightMargin: 8
-            }
-            radius: 8
-            color: TuiStyle.surfaceRaised
-            border.width: root.searchMode ? 2 : 1
-            border.color: root.searchMode ? TuiStyle.controlActiveBorder : TuiStyle.menuBorder
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 15
-                anchors.rightMargin: 12
-                spacing: 10
-
-                NerdIcon {
-                    symbol: root.commandMode ? "terminal" : "search"
-                    iconSize: 19
-                    color: root.searchMode ? TuiStyle.accent : TuiStyle.dim
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: root.hasQuery
-                        ? root.query
-                        : "Search apps and windows, or type > for a command"
-                    color: root.hasQuery ? TuiStyle.fg : TuiStyle.dim
-                    font.pixelSize: 14
-                    elide: Text.ElideRight
-                }
-
-                StyledText {
-                    text: root.searchMode ? "ESC" : "TYPE"
-                    color: TuiStyle.dim
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.IBeamCursor
-                onClicked: root.searchRequested()
-            }
-        }
-
-        Rectangle {
-            id: menuButton
-            anchors {
-                top: parent.top
-                bottom: parent.bottom
-                right: parent.right
-            }
-            width: 46
-            radius: 8
-            color: menuButtonArea.containsMouse || root.menuOpen
-                ? TuiStyle.surfaceHover
-                : TuiStyle.surfaceRaised
-            border.width: root.menuOpen ? 2 : 1
-            border.color: root.menuOpen ? TuiStyle.controlActiveBorder : TuiStyle.menuBorder
-
-            NerdIcon {
-                anchors.centerIn: parent
-                symbol: "menu"
-                iconSize: 21
-                color: root.menuOpen ? TuiStyle.accent : TuiStyle.fg
-            }
-
-            MouseArea {
-                id: menuButtonArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.menuOpen = !root.menuOpen
-            }
-        }
-    }
-
-    Rectangle {
-        id: sessionMenu
-        anchors {
-            top: parent.top
-            topMargin: 24
-            right: parent.right
-            rightMargin: 8
-        }
-        width: 230
-        implicitHeight: sessionMenuColumn.implicitHeight + 12
-        visible: root.menuOpen
-        z: 13
-        radius: 8
-        color: TuiStyle.bg
-        border.width: 1
-        border.color: TuiStyle.menuBorder
-
-        ColumnLayout {
-            id: sessionMenuColumn
-            anchors.fill: parent
-            anchors.margins: 6
-            spacing: 2
-
-            SessionMenuItem {
-                Layout.fillWidth: true
-                symbol: "logout"
-                label: "Log out"
-                onActivated: root.requestSessionAction("logout", "Logout")
-            }
-            SessionMenuItem {
-                Layout.fillWidth: true
-                symbol: "restart_alt"
-                label: "Restart"
-                onActivated: root.requestSessionAction("reboot", "Reboot")
-            }
-            SessionMenuItem {
-                Layout.fillWidth: true
-                symbol: "power_settings_new"
-                label: "Shut down"
-                onActivated: root.requestSessionAction("poweroff", "Shutdown")
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.topMargin: 4
-                Layout.bottomMargin: 4
-                implicitHeight: 1
-                color: TuiStyle.line
-                opacity: TuiStyle.dividerOpacity
-            }
-
-            SessionMenuItem {
-                Layout.fillWidth: true
-                symbol: "refresh"
-                label: "Reload Shell"
-                onActivated: root.reloadShell()
-            }
-        }
-    }
-    */
 
     Rectangle {
         id: resultsPopup
@@ -458,43 +279,6 @@ Item {
         }
     }
 
-    component SessionMenuItem: Rectangle {
-        id: menuItem
-        required property string symbol
-        required property string label
-        signal activated()
-
-        implicitHeight: 42
-        radius: 6
-        color: menuItemArea.containsMouse ? TuiStyle.surfaceHover : "transparent"
-
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 11
-            anchors.rightMargin: 11
-            spacing: 11
-
-            NerdIcon {
-                symbol: menuItem.symbol
-                iconSize: 19
-                color: TuiStyle.fg
-            }
-            StyledText {
-                Layout.fillWidth: true
-                text: menuItem.label
-                color: TuiStyle.fg
-                font.pixelSize: 13
-            }
-        }
-
-        MouseArea {
-            id: menuItemArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: menuItem.activated()
-        }
-    }
 
     component SearchResultRow: Rectangle {
         id: row

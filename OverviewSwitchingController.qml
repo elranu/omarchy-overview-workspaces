@@ -71,7 +71,7 @@ Singleton {
             return;
         GlobalStates.superReleaseMightTrigger = false;
         root.grabbed = false;
-        WorkspaceNavigation.commitSelectedWorkspace(false);
+        WorkspaceNavigation.commitSelectedWorkspace();
         GlobalStates.overviewOpen = false;
     }
 

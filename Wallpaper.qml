@@ -1,4 +1,5 @@
 pragma Singleton
+import "."
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -37,12 +38,22 @@ Singleton {
         }
     }
 
+    Component.onCompleted: root.refresh()
+
+    // The symlink only matters while the overview can display it; chase it
+    // then instead of spawning readlink every 5 s for a hidden panel.
     Timer {
         interval: 5000
         repeat: true
-        running: true
+        running: GlobalStates.overviewOpen === true
         onTriggered: root.refresh()
     }
 
-    Component.onCompleted: root.refresh()
+    Connections {
+        target: GlobalStates
+        function onOverviewOpenChanged() {
+            if (GlobalStates.overviewOpen)
+                root.refresh();
+        }
+    }
 }
