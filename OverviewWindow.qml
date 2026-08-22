@@ -242,9 +242,8 @@ Item { // Window
         }
     }
 
-    // Window previews keep only a neutral separator. Selection and hover are
-    // represented by the workspace border in OverviewWidget, avoiding two
-    // competing accent outlines when a window nearly fills its workspace.
+    // Window previews do not draw their own outline. The workspace card border
+    // is the single visual boundary for both the workspace and its previews.
     Rectangle {
         anchors.fill: parent
         color: "transparent"
@@ -252,7 +251,6 @@ Item { // Window
         topRightRadius: root.topRightRadius
         bottomRightRadius: root.bottomRightRadius
         bottomLeftRadius: root.bottomLeftRadius
-        border.color: TuiStyle.inactiveBorder
-        border.width: 2
+        border.width: 0
     }
 }
