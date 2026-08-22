@@ -44,16 +44,11 @@ Item {
             const keycode = slot + 9;
             commands.push(`hyprctl eval 'hl.unbind("SUPER + code:${keycode}")' >/dev/null 2>&1 || true`);
         }
-        for (const key of root.interruptKeys)
-            commands.push(`hyprctl eval 'hl.unbind("SUPER + ${key}")' >/dev/null 2>&1 || true`);
-
         // Reload restores the user's persistent Hyprland bindings. The second
         // unbind removes any old copy before installing this plugin's runtime
         // bindings, so repeated shell/plugin reloads cannot duplicate them.
         commands.push("hyprctl reload >/dev/null 2>&1 || true");
         commands.push(unbindOverview);
-        for (const key of root.interruptKeys)
-            commands.push(`hyprctl eval 'hl.unbind("SUPER + ${key}")' >/dev/null 2>&1 || true`);
 
         commands.push("hyprctl eval 'hl.bind(\"SUPER_L\", hl.dsp.global(\"quickshell:workspaceNumber\"), { ignore_mods = true, transparent = true, description = \"Overview Super state\" }); hl.bind(\"SUPER_R\", hl.dsp.global(\"quickshell:workspaceNumber\"), { ignore_mods = true, transparent = true, description = \"Overview Super state\" }); hl.bind(\"SUPER_L\", hl.dsp.global(\"quickshell:workspaceNumber\"), { ignore_mods = true, transparent = true, release = true, description = \"Overview Super state\" }); hl.bind(\"SUPER_R\", hl.dsp.global(\"quickshell:workspaceNumber\"), { ignore_mods = true, transparent = true, release = true, description = \"Overview Super state\" }); hl.bind(\"SUPER + TAB\", hl.dsp.global(\"quickshell:overviewNext\"), { description = \"Overview workspace next\" }); hl.bind(\"SUPER + SHIFT + TAB\", hl.dsp.global(\"quickshell:overviewPrev\"), { description = \"Overview workspace previous\" }); hl.bind(\"SUPER + SUPER_L\", hl.dsp.global(\"quickshell:overviewCommit\"), { release = true, description = \"Overview workspace commit\" }); hl.bind(\"SUPER + SUPER_R\", hl.dsp.global(\"quickshell:overviewCommit\"), { release = true, description = \"Overview workspace commit\" })' >/dev/null 2>&1 || true");
 
