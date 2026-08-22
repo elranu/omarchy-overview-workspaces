@@ -11,6 +11,8 @@ Panel {
 
     property var anchorItem: null
     property var hostWidget: null
+    property bool keybindingsEnabled: root.setting("keybindings", false) === true
+    property bool bindingsApplied: false
 
     function open() { root.controller.show() }
     function close() { root.controller.hide() }
@@ -29,11 +31,56 @@ Panel {
             root.hostWidget.settings = entry;
         if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
             root.bar.shell.updateEntryInline(root.moduleName, entry);
+        root.setKeybindings(mode === "legacy");
+    }
+
+    function keybindingScript(restore) {
+        const commands = [];
+        for (let slot = 1; slot <= 10; ++slot) {
+            const keycode = slot + 9;
+            commands.push(`hyprctl eval 'hl.unbind("SUPER + code:${keycode}")' >/dev/null 2>&1 || true`);
+        }
+        if (restore) {
+            commands.push("hyprctl reload >/dev/null 2>&1 || true");
+        } else {
+            for (let slot = 1; slot <= 10; ++slot) {
+                const keycode = slot + 9;
+                commands.push(`hyprctl eval 'hl.unbind("SUPER + code:${keycode}"); hl.bind("SUPER + code:${keycode}", hl.dsp.global("quickshell:workspaceSlot${slot}"), { description = "Overview workspace slot ${slot}" })' >/dev/null 2>&1 || true`);
+            }
+        }
+        return commands.join("; ");
+    }
+
+    function setKeybindings(enabled) {
+        if (root.bindingsApplied && root.keybindingsEnabled === enabled)
+            return;
+        Quickshell.execDetached(["bash", "-lc", root.keybindingScript(!enabled)]);
+        root.bindingsApplied = true;
+        root.keybindingsEnabled = enabled;
+        var entry = { id: root.moduleName };
+        for (var key in root.settings) {
+            if (key !== "id")
+                entry[key] = root.settings[key];
+        }
+        entry.keybindings = enabled;
+        root.settings = entry;
+        if (root.hostWidget && "settings" in root.hostWidget)
+            root.hostWidget.settings = entry;
+        if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+            root.bar.shell.updateEntryInline(root.moduleName, entry);
+    }
+
+    function syncSettings() {
+        const mode = root.setting("sortMode", "legacy") === "legacy" ? "legacy" : "system";
+        GlobalStates.overviewSortMode = mode;
+        root.setKeybindings(mode === "legacy");
     }
 
     Component.onCompleted: {
-        GlobalStates.overviewSortMode = root.setting("sortMode", "legacy") === "legacy" ? "legacy" : "system";
+        root.syncSettings();
     }
+
+    onSettingsChanged: root.syncSettings()
 
     KeyboardPanel {
         id: panel

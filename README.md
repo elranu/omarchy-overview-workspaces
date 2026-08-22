@@ -29,8 +29,12 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 omarchy-shell shell summon hancore.overview-workspaces '{}'
 ```
 
-如果要使用“优化排序”的 `Win+1`、`Win+2` 等动态槽位，需要将下面片段加入
-用户的 `~/.config/hypr/bindings.lua`，并执行 `hyprctl reload`：
+打开顶部栏的插件设置面板，在“优化排序”和“系统原生排序”之间选择即可自动切换快捷键方案。
+选择“优化排序”时，插件注册 `Win+1` 到 `Win+0` 来切换动态视觉槽位；选择“系统原生排序”时，
+插件移除运行时绑定并重新加载 Hyprland，从而恢复用户原来的绑定。设置会保存在插件配置中。
+
+如果设置面板不可用，也可以手动将下面片段加入用户的
+`~/.config/hypr/bindings.lua`，并执行 `hyprctl reload`：
 
 ```lua
 for slot = 1, 10 do
