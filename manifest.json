@@ -2,15 +2,16 @@
   "schemaVersion": 1,
   "id": "hancore.overview-workspaces",
   "name": "Overview Workspaces",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "HANCORE",
   "license": "MIT",
-  "description": "Complete Win-key workspace overview with live thumbnails, dynamic optimized ordering, native Omarchy ordering, drag-and-drop, and persistent workspace slots.",
+  "description": "Omarchy workspace experience enhancement with live thumbnails, dynamic and native ordering, drag-and-drop, and automatic Win-key integration.",
   "keepLoaded": true,
-  "kinds": ["panel", "bar-widget"],
+  "kinds": ["panel", "bar-widget", "service"],
   "entryPoints": {
     "panel": "Overview.qml",
-    "barWidget": "bar/widget.qml"
+    "barWidget": "bar/widget.qml",
+    "service": "KeybindingService.qml"
   },
   "barWidget": {
     "displayName": "Workspace ordering",
