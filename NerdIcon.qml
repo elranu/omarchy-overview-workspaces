@@ -8,7 +8,7 @@ Text {
 
     function glyphFor(name) {
         switch (String(name || "apps")) {
-        case "add": return "\uDB80\uDC2F";           // mdi-plus
+        case "add": return "\uF067";                // fa-plus
         case "apps": return "\uF00A";                // fa-th-large
         case "select_window": return "\uF24D";       // fa-object-group
         case "terminal": return "\uF120";            // fa-terminal
