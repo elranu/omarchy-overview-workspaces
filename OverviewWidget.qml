@@ -701,7 +701,9 @@ Item {
                         // Wallpaper background for all workspaces (including trailing empty)
                         Rectangle {
                             anchors.fill: parent
-                            color: Appearance.colors.colSurfaceContainer
+                            color: workspace.isTrailingEmpty
+                                ? OmarchyTheme.tintedBackground
+                                : Appearance.colors.colSurfaceContainer
                         }
 
                         Image {
@@ -713,7 +715,9 @@ Item {
                             asynchronous: false
                             cache: true
                             mipmap: true
-                            opacity: 0.26
+                            // The empty/new workspace has no window thumbnail
+                            // behind it, so keep its wallpaper fully opaque.
+                            opacity: workspace.isTrailingEmpty ? 1 : 0.26
                         }
 
                         StyledText {

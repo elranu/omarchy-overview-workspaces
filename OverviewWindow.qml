@@ -219,26 +219,6 @@ Item { // Window
             }
         }
 
-        Rectangle {
-            visible: root.iconPath === "" || windowIcon.status === Image.Error
-            anchors {
-                top: root.centerIcons ? undefined : parent.top
-                left: root.centerIcons ? undefined : parent.left
-                centerIn: root.centerIcons ? parent : undefined
-                margins: Math.min(root.targetWindowWidth, root.targetWindowHeight) * root.iconGapRatio
-            }
-            width: windowIcon.width
-            height: windowIcon.height
-            radius: 0
-            color: ColorUtils.transparentize(TuiStyle.accent, 0.25)
-
-            NerdIcon {
-                anchors.centerIn: parent
-                symbol: "apps"
-                iconSize: Math.max(16, parent.height * 0.45)
-                color: TuiStyle.fg
-            }
-        }
     }
 
     // Window previews do not draw their own outline. The workspace card border
