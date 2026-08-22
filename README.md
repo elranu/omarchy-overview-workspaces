@@ -1,6 +1,12 @@
 # Overview Workspaces
 
-![Overview Workspaces preview](preview.png)
+![Overview after pressing Win](preview.png)
+
+*First image — Press Win/Super to open the Overview. / 第一张：按下 Win/Super 后出现的 Overview。 / 1枚目：Win/Super キーを押して表示した Overview。*
+
+![Overview while moving a window](preview-move.png)
+
+*Second image — Click and drag windows freely inside Overview to move them between workspaces. / 第二张：可以在 Overview 中自由点击并拖拽窗口，在工作区之间移动。 / 2枚目：Overview 内でウィンドウを自由にクリック・ドラッグしてワークスペース間を移動できます。*
 
 Overview Workspaces is an Omarchy Quattro experience-enhancement plugin. It provides a full-screen workspace overview with live window previews, wallpaper-backed workspace cards, dynamic workspace ordering, native workspace ordering, drag-and-drop movement, and automatic keyboard integration.
 
