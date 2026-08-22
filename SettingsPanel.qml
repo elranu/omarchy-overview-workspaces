@@ -31,10 +31,8 @@ Panel {
             root.bar.shell.updateEntryInline(root.moduleName, entry);
     }
 
-    readonly property bool legacySelected: GlobalStates.overviewSortMode === "legacy"
-
     Component.onCompleted: {
-        GlobalStates.overviewSortMode = root.setting("sortMode", "system") === "legacy" ? "legacy" : "system";
+        GlobalStates.overviewSortMode = root.setting("sortMode", "legacy") === "legacy" ? "legacy" : "system";
     }
 
     KeyboardPanel {
@@ -58,7 +56,7 @@ Panel {
                 spacing: Style.space(10)
 
                 Text {
-                    text: "Overview workspace order"
+                    text: "Overview workspace ordering"
                     color: root.barForeground
                     font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: Style.font.title
@@ -66,7 +64,7 @@ Panel {
                 }
 
                 Text {
-                    text: "Choose how workspace cards are arranged."
+                    text: "Choose the plugin's optimized order or Omarchy's native order."
                     color: Color.muted
                     font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: Style.font.body
@@ -74,8 +72,8 @@ Panel {
 
                 Repeater {
                     model: [
-                        { key: "system", title: "System default", detail: "Match Omarchy's top bar, including empty workspaces." },
-                        { key: "legacy", title: "Original overview", detail: "Occupied workspaces in the original persistent visual order." }
+                        { key: "legacy", title: "Optimized order (recommended)", detail: "Plugin-managed dynamic order; Win+number follows slots 1, 2, 3... and New workspace stays last." },
+                        { key: "system", title: "System native order", detail: "Matches Omarchy's native slots 1–10, including empty slots, plus real 11+ workspaces." }
                     ]
 
                     delegate: Rectangle {

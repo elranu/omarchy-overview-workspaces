@@ -14,7 +14,8 @@
 - 每个显示器保留一个 trailing empty 新工作区
 - Hyprland 工作区数据刷新、拖拽中的 pending 状态和窗口地址映射
 - `WorkspaceOrder` 持久化工作区视觉顺序，并回收可复用的 Hyprland ID
-- Original 模式下 Win+数字按视觉槽位切换，而不是直接按 Hyprland 原始 ID 切换
+- 默认使用“优化排序”：插件维护动态视觉顺序，Win+数字按 `1、2、3...` 视觉槽位切换，New workspace 永远在最后
+- 可在顶部栏齿轮设置中切换“系统原生排序”：显示 Omarchy 的 `1–10`（包含空白槽位）以及真实存在的 `11+` 工作区
 
 ## 安装
 
@@ -28,7 +29,7 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 omarchy-shell shell summon hancore.overview-workspaces '{}'
 ```
 
-如果要启用 Original 模式的 `Win+1`、`Win+2` 等动态槽位，需要将下面片段加入
+如果要使用“优化排序”的 `Win+1`、`Win+2` 等动态槽位，需要将下面片段加入
 用户的 `~/.config/hypr/bindings.lua`，并执行 `hyprctl reload`：
 
 ```lua

@@ -34,7 +34,7 @@ BarWidget {
     }
 
     function applySettings() {
-        Local.GlobalStates.overviewSortMode = setting("sortMode", "system") === "legacy"
+        Local.GlobalStates.overviewSortMode = setting("sortMode", "legacy") === "legacy"
             ? "legacy" : "system";
     }
     function open() { if (settingsPanelLoader.item) settingsPanelLoader.item.open(); }

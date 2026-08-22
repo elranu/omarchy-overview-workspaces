@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "HANCORE",
   "license": "MIT",
-  "description": "A Win-key workspace overview inspired by oh-my-desktop.",
+  "description": "Complete Win-key workspace overview with live thumbnails, dynamic optimized ordering, native Omarchy ordering, drag-and-drop, and persistent workspace slots.",
   "keepLoaded": true,
   "kinds": ["panel", "bar-widget"],
   "entryPoints": {
@@ -13,8 +13,8 @@
     "barWidget": "bar/widget.qml"
   },
   "barWidget": {
-    "displayName": "Overview order",
-    "description": "Choose the workspace overview ordering algorithm.",
+    "displayName": "Workspace ordering",
+    "description": "Configure Optimized order (recommended) or System native order. Optimized order keeps dynamic visual slots, routes Win+number to those slots, and keeps New workspace last.",
     "category": "Desktop",
     "allowMultiple": false,
     "defaultSection": "left"

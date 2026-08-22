@@ -20,7 +20,9 @@ Singleton {
     property bool overviewOpen: false
     property string overviewAnchorMonitorName: ""
     property bool overviewSearchMode: false
-    property string overviewSortMode: "system"
+    // The plugin's optimized visual ordering is the default. The persisted
+    // setting can still switch to the native Omarchy order explicitly.
+    property string overviewSortMode: "legacy"
     property int overviewFocusedWorkspaceId: -1
     property var overviewWorkspaceMru: []
     property int overviewDraggingFromWorkspace: -1
