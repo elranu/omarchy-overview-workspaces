@@ -1,5 +1,10 @@
 # Overview Workspaces
 
+## 0.1.2
+
+- Adapted the settings panel and overview scrim to theme-derived popup and
+  background colors; removed the hard-coded dark scrim color.
+
 ![Overview after pressing Win](preview.png)
 
 *First image — Press Win/Super to open the Overview. / 第一张：按下 Win/Super 后出现的 Overview。 / 1枚目：Win/Super キーを押して表示した Overview。*

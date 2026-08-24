@@ -256,7 +256,7 @@ Scope {
             Rectangle {
                 id: scrim
                 anchors.fill: parent
-                color: ColorUtils.transparentize("#0f0f14", 0.25)
+                color: ColorUtils.transparentize(Color.background, 0.25)
                 visible: GlobalStates.overviewOpen
 
                 Behavior on opacity {

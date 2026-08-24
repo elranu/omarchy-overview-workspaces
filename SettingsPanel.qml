@@ -11,6 +11,8 @@ Panel {
 
     property var anchorItem: null
     property var hostWidget: null
+    readonly property color panelForeground: Color.popups.text
+    readonly property color panelMuted: Util.alpha(Color.popups.text, 0.58)
 
     function open() { root.controller.show() }
     function close() { root.controller.hide() }
@@ -65,7 +67,7 @@ Panel {
 
                 Text {
                     text: "Overview workspace ordering"
-                    color: root.barForeground
+                    color: root.panelForeground
                     font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: Style.font.title
                     font.bold: true
@@ -75,7 +77,7 @@ Panel {
                     text: "Choose the plugin's optimized order or Omarchy's native order."
                     width: parent.width
                     wrapMode: Text.Wrap
-                    color: Color.muted
+                    color: root.panelMuted
                     font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: Style.font.body
                 }
@@ -92,9 +94,9 @@ Panel {
                         height: optionColumn.implicitHeight + Style.space(16)
                         color: GlobalStates.overviewSortMode === modelData.key
                             ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.18)
-                            : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.06)
+                            : Util.alpha(Color.popups.text, 0.06)
                         border.width: 1
-                        border.color: GlobalStates.overviewSortMode === modelData.key ? Color.accent : Color.muted
+                        border.color: GlobalStates.overviewSortMode === modelData.key ? Color.accent : Color.popups.border
 
                         Column {
                             id: optionColumn
@@ -105,7 +107,7 @@ Panel {
                                 text: modelData.title
                                 width: parent.width
                                 wrapMode: Text.Wrap
-                                color: root.barForeground
+                                color: root.panelForeground
                                 font.family: root.bar ? root.bar.fontFamily : Style.font.family
                                 font.pixelSize: Style.font.body
                                 font.bold: true
@@ -114,7 +116,7 @@ Panel {
                                 text: modelData.detail
                                 width: parent.width
                                 wrapMode: Text.Wrap
-                                color: Color.muted
+                                color: root.panelMuted
                                 font.family: root.bar ? root.bar.fontFamily : Style.font.family
                                 font.pixelSize: Style.font.caption
                             }
