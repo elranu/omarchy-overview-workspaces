@@ -4,6 +4,14 @@
 > [#1401](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/1401)
 > 及兄弟插件 #1468、#1428 的审核往返。供上架前自查与复审对照。
 
+## Published status
+
+The plugin was approved and verified, and is now published at:
+https://omarchyplugins.com/plugin.html?id=hancore.overview-workspaces
+
+The marketplace verification applies to the published snapshot and is not a
+security audit.
+
 ## 一、商店审核机制速览
 
 1. **按精确 HEAD 审核**：维护者引用具体 commit SHA 复核。修复必须：上游提交 →

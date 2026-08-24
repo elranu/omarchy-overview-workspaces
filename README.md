@@ -15,6 +15,11 @@
 
 Overview Workspaces is an Omarchy Quattro experience-enhancement plugin. It provides a full-screen workspace overview with live window previews, wallpaper-backed workspace cards, dynamic workspace ordering, native workspace ordering, drag-and-drop movement, and automatic keyboard integration.
 
+## Marketplace
+
+Overview Workspaces has been approved and verified in the Omarchy plugin marketplace:
+[open the published marketplace page](https://omarchyplugins.com/plugin.html?id=hancore.overview-workspaces).
+
 ## English
 
 ### Features
