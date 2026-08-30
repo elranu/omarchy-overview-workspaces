@@ -13,6 +13,8 @@ Item { // Window
     property var toplevel
     property var windowData
     property bool captureActive: true
+    property int captureDelayMs: 0
+    property bool captureLive: false
     property var monitorData
     property var scale
     property real scaleX: scale * widthRatio
@@ -144,7 +146,39 @@ Item { // Window
         id: windowPreview
         anchors.fill: parent
         captureSource: root.captureActive ? root.toplevel : null
-        live: root.captureActive
+        // Start a live stream only long enough to receive the first frame.
+        // Keeping the stream alive indefinitely makes workspace moves contend
+        // for screencopy contexts on some compositors.
+        live: root.captureActive && root.captureLive
+
+        Timer {
+            id: captureTimer
+            interval: Math.max(1, root.captureDelayMs)
+            repeat: false
+            running: root.captureActive && !!root.toplevel
+            onTriggered: root.captureLive = true
+        }
+
+        Timer {
+            id: captureStopTimer
+            interval: 500
+            repeat: false
+            onTriggered: root.captureLive = false
+        }
+
+        Connections {
+            target: root
+            function onCaptureActiveChanged() {
+                root.captureLive = false;
+                if (root.captureActive && root.toplevel)
+                    captureTimer.restart();
+            }
+        }
+
+        onHasContentChanged: {
+            if (hasContent)
+                captureStopTimer.restart();
+        }
 
         // Color overlay for interactions
         Rectangle {

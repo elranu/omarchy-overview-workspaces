@@ -808,6 +808,7 @@ Item {
                 delegate: OverviewWindow {
                     id: window
                     required property string modelData
+                    required property int index
                     property int monitorId: windowData?.monitor
                     property var monitor: ServiceManager.workspace.monitors.find(m => m.id == monitorId)
                     property string address: modelData.split("|")[0]
@@ -823,6 +824,7 @@ Item {
                     }
                     toplevel: modelToplevel
                     captureActive: GlobalStates.overviewOpen && visible && !!modelToplevel
+                    captureDelayMs: (index % 12) * 80
                     monitorData: this.monitor
                     scale: root.scale
                     scaleX: {
@@ -882,7 +884,7 @@ Item {
                         }
                     }
 
-                    z: Drag.active ? root.windowDraggingZ : (root.windowZ + windowData?.floating + windowData?.fullscreen * 2)
+                    z: Drag.active ? root.windowDraggingZ : (root.windowZ + window.windowData?.floating + window.windowData?.fullscreen * 2)
                     Drag.hotSpot.x: width / 2
                     Drag.hotSpot.y: height / 2
                     MouseArea {
@@ -891,10 +893,10 @@ Item {
                         hoverEnabled: true
                         onEntered: {
                             window.hovered = true
-                            root.hoveredWindowData = windowData
+                            root.hoveredWindowData = window.windowData
                             // Highlight the workspace this window belongs to so
                             // the workspace border tracks the mouse too.
-                            const wsId = windowData?.workspace?.id
+                            const wsId = window.windowData?.workspace?.id
                             if (wsId > 0) {
                                 const entry = root.overviewEntries.find(e => e.id === wsId)
                                 if (entry)
@@ -905,15 +907,15 @@ Item {
                         }
                         onExited: {
                             window.hovered = false
-                            if (root.hoveredWindowData?.address === windowData?.address)
+                            if (root.hoveredWindowData?.address === window.windowData?.address)
                                 root.hoveredWindowData = null
-                            if (root.hoveredWorkspaceEntry?.id === windowData?.workspace?.id)
+                            if (root.hoveredWorkspaceEntry?.id === window.windowData?.workspace?.id)
                                 root.hoveredWorkspaceEntry = null
                         }
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         drag.target: parent
                         onPressed: (mouse) => {
-                            WorkspaceNavigation.beginWindowDrag(windowData?.workspace.id)
+                            WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace.id)
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window
@@ -926,7 +928,7 @@ Item {
                             const targetIsTrailing = GlobalStates.overviewDraggingTargetIsTrailing
                             window.pressed = false
                             window.Drag.active = false
-                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, windowData?.workspace.id, targetWorkspace, targetIsTrailing)) {
+                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing)) {
                                 updateWindowPosition.restart()
                             }
                             else {
@@ -940,14 +942,14 @@ Item {
                             }
                         }
                         onClicked: (event) => {
-                            if (!windowData) return;
+                            if (!window.windowData) return;
 
                             if (event.button === Qt.LeftButton) {
                                 GlobalStates.overviewOpen = false;
-                                WorkspaceNavigation.focusWindow(windowData);
+                                WorkspaceNavigation.focusWindow(window.windowData);
                                 event.accepted = true;
                             } else if (event.button === Qt.MiddleButton) {
-                                Hyprland.dispatch(`hl.dsp.window.close({window = "address:${windowData.address}"})`)
+                                Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
                                 event.accepted = true
                             }
                         }

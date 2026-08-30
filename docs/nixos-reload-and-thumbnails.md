@@ -23,7 +23,8 @@
 - 移除 NixOS 环境缺失的 `Qt5Compat.GraphicalEffects` 硬依赖。
 - 对窗口地址兼容带 `0x` 和不带 `0x` 两种格式。
 - 总览关闭时设置 `captureSource: null` 和 `live: false`，不保留后台 screencopy context。
-- 使用 `窗口地址|工作区ID` 作为窗口模型值。窗口迁移工作区时只重建该窗口的 delegate，不轮询调用 `captureFrame()`。
+- 总览打开后每个窗口只请求一次 `captureFrame()`，并按索引错峰，避免同时创建大量 recording context。
+- 使用 `窗口地址|工作区ID|截图代数` 作为窗口模型值。窗口迁移工作区时，受影响工作区的 delegate 重新创建并重新截图。
 
 ### 工作区截图策略
 
