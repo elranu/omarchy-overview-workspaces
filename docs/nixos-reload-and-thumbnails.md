@@ -25,6 +25,18 @@
 - 总览关闭时设置 `captureSource: null` 和 `live: false`，不保留后台 screencopy context。
 - 使用 `窗口地址|工作区ID` 作为窗口模型值。窗口迁移工作区时只重建该窗口的 delegate，不轮询调用 `captureFrame()`。
 
+### 工作区截图策略
+
+缩略图刷新以工作区为单位，而不是只刷新被拖动的窗口。`HyprlandData` 比较相邻两次 `hyprctl clients -j` 的地址到工作区映射：如果一个窗口从工作区 A 移到 B，就同时递增 A 和 B 的截图代数。
+
+窗口模型值包含：
+
+```text
+窗口地址 | 当前工作区 ID | 工作区截图代数
+```
+
+因此 A、B 中的所有窗口 delegate 都会重新创建并重新获取画面，其他工作区保持不变。这也覆盖了从 Hyprland 外部移动窗口的情况，不依赖插件自己的拖拽路径。
+
 ## 开发安全规则
 
 开发目录未连接到 `~/.config/omarchy/plugins` 时，只进行离线修改。重新连接前必须确认：
@@ -34,4 +46,3 @@ rg -n 'hyprctl reload|captureFrame\(' . -g '*.qml'
 ```
 
 正常结果应为空。不要在 Overview 打开或窗口拖动期间执行插件热扫描。
-

@@ -798,7 +798,10 @@ Item {
                                 return "";
                             if (!root.overviewEntryIds.includes(win.workspace.id))
                                 return "";
-                            return `${address}|${win.workspace.id}`;
+                            const captureRevision = Number(
+                                GlobalStates.overviewWorkspaceCaptureRevision[win.workspace.id] ?? 0
+                            );
+                            return `${address}|${win.workspace.id}|${captureRevision}`;
                         }).filter(key => key.length > 0)
                     }
                 }

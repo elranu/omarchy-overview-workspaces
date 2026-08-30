@@ -566,7 +566,27 @@ Singleton {
                 // stdout; JSON.parse("") would log a SyntaxError per poll.
                 if (!root.hyprlandIpcAvailable || !clientsCollector.text.trim())
                     return;
-                root.windowList = JSON.parse(clientsCollector.text)
+                const nextWindowList = JSON.parse(clientsCollector.text);
+                const affectedWorkspaces = [];
+                const previousByAddress = root.windowByAddress ?? {};
+                const nextByAddress = {};
+                for (const win of nextWindowList)
+                    nextByAddress[win.address] = win;
+                for (const address of Object.keys(previousByAddress)) {
+                    const previousWorkspace = previousByAddress[address]?.workspace?.id;
+                    const nextWorkspace = nextByAddress[address]?.workspace?.id;
+                    if (previousWorkspace !== nextWorkspace) {
+                        affectedWorkspaces.push(previousWorkspace, nextWorkspace);
+                    }
+                }
+                for (const address of Object.keys(nextByAddress)) {
+                    if (!previousByAddress[address])
+                        affectedWorkspaces.push(nextByAddress[address]?.workspace?.id);
+                }
+                if (affectedWorkspaces.length > 0)
+                    GlobalStates.refreshWorkspaceCaptures(affectedWorkspaces);
+
+                root.windowList = nextWindowList
                 let tempWinByAddress = {};
                 for (var i = 0; i < root.windowList.length; ++i) {
                     var win = root.windowList[i];

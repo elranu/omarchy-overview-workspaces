@@ -32,6 +32,10 @@ Singleton {
     property var overviewPendingWorkspaceMonitorById: ({})
     property var overviewPendingOccupiedWorkspaces: []
     property int overviewRefreshSerial: 0
+    // Incremented for workspaces whose visible window set changed. The
+    // overview uses these generations as capture epochs so a move from A to
+    // B refreshes both affected workspace snapshots.
+    property var overviewWorkspaceCaptureRevision: ({})
     property bool regionSelectorOpen: false
     property bool screenshotActive: false
     property bool screenLocked: false
@@ -102,6 +106,16 @@ Singleton {
 
     function refreshOverviewModel() {
         GlobalStates.overviewRefreshSerial += 1;
+    }
+
+    function refreshWorkspaceCaptures(workspaceIds) {
+        const current = Object.assign({}, root.overviewWorkspaceCaptureRevision ?? {});
+        for (const workspaceId of workspaceIds ?? []) {
+            const id = Number(workspaceId);
+            if (id > 0)
+                current[id] = (Number(current[id]) || 0) + 1;
+        }
+        root.overviewWorkspaceCaptureRevision = current;
     }
 
     function suppressEmptyWorkspace(wsId) {
