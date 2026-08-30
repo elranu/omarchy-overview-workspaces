@@ -316,24 +316,45 @@ Item { // Window
     }
 
     Image {
-            id: windowIcon
-            visible: !root.anyPreviewContent && !root.everHadContent
-            asynchronous: false
-            property real baseSize: Math.min(root.targetWindowWidth, root.targetWindowHeight)
-            anchors {
-                top: root.centerIcons ? undefined : parent.top
-                left: root.centerIcons ? undefined : parent.left
-                centerIn: root.centerIcons ? parent : undefined
-                margins: baseSize * root.iconGapRatio
-            }
-            property var iconSize: {
-                return baseSize * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio);
-            }
-            mipmap: true
-            Layout.alignment: Qt.AlignHCenter
-            source: root.iconPath
-            width: iconSize
-            height: iconSize
+        id: windowIcon
+        visible: root.iconPath !== "" && status !== Image.Error
+        asynchronous: false
+        property real baseSize: Math.min(root.targetWindowWidth, root.targetWindowHeight)
+        anchors {
+            top: root.centerIcons ? undefined : parent.top
+            left: root.centerIcons ? undefined : parent.left
+            centerIn: root.centerIcons ? parent : undefined
+            margins: baseSize * root.iconGapRatio
+        }
+        property var iconSize: {
+            return baseSize * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio);
+        }
+        mipmap: true
+        Layout.alignment: Qt.AlignHCenter
+        source: root.iconPath
+        width: iconSize
+        height: iconSize
+    }
+
+    Rectangle {
+        visible: root.iconPath === "" || windowIcon.status === Image.Error
+        anchors {
+            top: root.centerIcons ? undefined : parent.top
+            left: root.centerIcons ? undefined : parent.left
+            centerIn: root.centerIcons ? parent : undefined
+            margins: Math.min(root.targetWindowWidth, root.targetWindowHeight) * root.iconGapRatio
+        }
+        width: windowIcon.width
+        height: windowIcon.height
+        radius: 0
+        color: ColorUtils.transparentize(TuiStyle.accent, 0.25)
+
+        NerdIcon {
+            anchors.centerIn: parent
+            symbol: "apps"
+            iconSize: Math.max(16, parent.height * 0.45)
+            color: TuiStyle.fg
+        }
     }
 
     // Window previews do not draw their own outline. The workspace card border
