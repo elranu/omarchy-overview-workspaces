@@ -13,8 +13,6 @@ Item { // Window
     property var toplevel
     property var windowData
     property bool captureActive: true
-    property int captureDelayMs: 0
-    property bool captureLive: false
     property var monitorData
     property var scale
     property real scaleX: scale * widthRatio
@@ -112,11 +110,30 @@ Item { // Window
 
     property bool indicateXWayland: windowData?.xwayland ?? false
 
-    x: xOffset + localX
-    y: yOffset + localY
+    property bool holdPosition: false
+    property real holdX: 0
+    property real holdY: 0
+
+    x: holdPosition ? holdX : (xOffset + localX)
+    y: holdPosition ? holdY : (yOffset + localY)
     width: targetWindowWidth
     height: targetWindowHeight
     opacity: 1
+
+    function holdCurrentPosition() {
+        holdX = x;
+        holdY = y;
+        holdPosition = true;
+    }
+
+    function restorePositionBinding() {
+        x = Qt.binding(() => root.holdPosition ? root.holdX : root.xOffset + root.localX);
+        y = Qt.binding(() => root.holdPosition ? root.holdY : root.yOffset + root.localY);
+    }
+
+    function releaseHeldPosition() {
+        holdPosition = false;
+    }
 
     property real topLeftRadius: 0
     property real topRightRadius: 0
@@ -125,63 +142,169 @@ Item { // Window
     readonly property bool perfMode: (Persistent.states?.display?.optimization ?? "balanced") === "performance"
     clip: true
 
-    Behavior on x {
-        enabled: !root.perfMode
-        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-    }
-    Behavior on y {
-        enabled: !root.perfMode
-        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-    }
-    Behavior on width {
-        enabled: !root.perfMode
-        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-    }
-    Behavior on height {
-        enabled: !root.perfMode
-        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+    property bool everHadContent: false
+    property int captureAttempt: 0
+    property int lastWorkspaceId: -1
+    property int frontSlot: 0
+    property bool slot0Armed: false
+    property bool slot1Armed: false
+    property url freezeUrl: ""
+    property var captureToplevel: null
+    readonly property bool anyPreviewContent: preview0.hasContent || preview1.hasContent
+    readonly property bool showingFreeze: !root.anyPreviewContent && root.freezeUrl != ""
+
+    function rememberToplevel() {
+        if (root.toplevel)
+            root.captureToplevel = root.toplevel;
     }
 
-    ScreencopyView {
-        id: windowPreview
+    function armFront() {
+        root.rememberToplevel();
+        if (!root.captureActive || !root.captureToplevel)
+            return;
+        if (root.frontSlot === 0)
+            root.slot0Armed = true;
+        else
+            root.slot1Armed = true;
+    }
+
+    function recaptureNow() {
+        if (!root.captureActive)
+            return;
+        root.rememberToplevel();
+        if (root.frontSlot === 0)
+            root.slot1Armed = true;
+        else
+            root.slot0Armed = true;
+    }
+
+    function promoteSlot(slot) {
+        root.frontSlot = slot;
+        root.captureAttempt = 0;
+        root.everHadContent = true;
+        if (slot === 0)
+            root.slot1Armed = false;
+        else
+            root.slot0Armed = false;
+        root.snapshotPreview(false);
+    }
+
+    function snapshotPreview() {
+        if (!root.anyPreviewContent)
+            return;
+        previewHost.grabToImage(result => {
+            if (result?.url)
+                root.freezeUrl = result.url;
+        });
+    }
+
+    onToplevelChanged: root.rememberToplevel()
+
+    onWindowDataChanged: {
+        const ws = windowData?.workspace?.id ?? -1;
+        if (root.holdPosition && ws > 0 && ws !== root.lastWorkspaceId)
+            root.releaseHeldPosition();
+        if (root.lastWorkspaceId > 0 && ws > 0 && ws !== root.lastWorkspaceId) {
+            root.snapshotPreview();
+            if (!root.anyPreviewContent)
+                root.recaptureNow();
+        }
+        root.lastWorkspaceId = ws;
+    }
+
+    onCaptureActiveChanged: {
+        if (root.captureActive) {
+            root.armFront();
+        } else {
+            root.slot0Armed = false;
+            root.slot1Armed = false;
+            root.captureAttempt = 0;
+            root.freezeUrl = "";
+            root.everHadContent = false;
+        }
+    }
+
+    Timer {
+        id: freezeTimer
+        interval: 400
+        repeat: true
+        running: root.captureActive && root.anyPreviewContent
+        onTriggered: root.snapshotPreview()
+    }
+
+    Timer {
+        id: captureWatchdog
+        interval: 50
+        repeat: true
+        running: root.captureActive && !root.anyPreviewContent && root.captureAttempt < 8
+        onTriggered: {
+            if (root.anyPreviewContent || !root.captureActive)
+                return;
+            root.captureAttempt += 1;
+            root.recaptureNow();
+        }
+    }
+
+    Component.onCompleted: {
+        root.rememberToplevel();
+        root.lastWorkspaceId = windowData?.workspace?.id ?? -1;
+        if (root.captureActive)
+            root.armFront();
+    }
+
+    Item {
+        id: previewHost
         anchors.fill: parent
-        captureSource: root.captureActive ? root.toplevel : null
-        // Start a live stream only long enough to receive the first frame.
-        // Keeping the stream alive indefinitely makes workspace moves contend
-        // for screencopy contexts on some compositors.
-        live: root.captureActive && root.captureLive
 
-        Timer {
-            id: captureTimer
-            interval: Math.max(1, root.captureDelayMs)
-            repeat: false
-            running: root.captureActive && !!root.toplevel
-            onTriggered: root.captureLive = true
-        }
+        ScreencopyView {
+            id: preview0
+            anchors.fill: parent
+            captureSource: root.slot0Armed && root.captureActive && root.captureToplevel
+                ? root.captureToplevel : null
+            live: root.slot0Armed && root.captureActive
+            visible: hasContent && (root.frontSlot === 0 || !preview1.hasContent)
 
-        Timer {
-            id: captureStopTimer
-            interval: 500
-            repeat: false
-            onTriggered: root.captureLive = false
-        }
-
-        Connections {
-            target: root
-            function onCaptureActiveChanged() {
-                root.captureLive = false;
-                if (root.captureActive && root.toplevel)
-                    captureTimer.restart();
+            onHasContentChanged: {
+                if (hasContent)
+                    root.promoteSlot(0);
+            }
+            onStopped: {
+                if (root.frontSlot === 0)
+                    root.recaptureNow();
             }
         }
 
-        onHasContentChanged: {
-            if (hasContent)
-                captureStopTimer.restart();
-        }
+        ScreencopyView {
+            id: preview1
+            anchors.fill: parent
+            captureSource: root.slot1Armed && root.captureActive && root.captureToplevel
+                ? root.captureToplevel : null
+            live: root.slot1Armed && root.captureActive
+            visible: hasContent && (root.frontSlot === 1 || !preview0.hasContent)
 
-        // Color overlay for interactions
-        Rectangle {
+            onHasContentChanged: {
+                if (hasContent)
+                    root.promoteSlot(1);
+            }
+            onStopped: {
+                if (root.frontSlot === 1)
+                    root.recaptureNow();
+            }
+        }
+    }
+
+    Image {
+        id: freezeImage
+        anchors.fill: parent
+        visible: root.showingFreeze
+        source: root.freezeUrl
+        fillMode: Image.Stretch
+        asynchronous: false
+        cache: false
+        smooth: true
+    }
+
+    Rectangle {
             anchors.fill: parent
             topLeftRadius: root.topLeftRadius
             topRightRadius: root.topRightRadius
@@ -190,14 +313,11 @@ Item { // Window
             color: pressed ? ColorUtils.transparentize(Appearance.colors.colLayer2Active, 0.5) : 
                 hovered ? ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 0.7) : 
                 ColorUtils.transparentize(Appearance.colors.colLayer2)
-        }
+    }
 
-        Image {
+    Image {
             id: windowIcon
-            // Synchronous load: the icon is a tiny file and loads in well
-            // under a frame, so it appears together with the ScreencopyView
-            // snapshot instead of popping in a frame later. This avoids any
-            // fade/gate that would otherwise show a black box first.
+            visible: !root.anyPreviewContent && !root.everHadContent
             asynchronous: false
             property real baseSize: Math.min(root.targetWindowWidth, root.targetWindowHeight)
             anchors {
@@ -214,15 +334,6 @@ Item { // Window
             source: root.iconPath
             width: iconSize
             height: iconSize
-
-            Behavior on width {
-                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-            }
-            Behavior on height {
-                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-            }
-        }
-
     }
 
     // Window previews do not draw their own outline. The workspace card border

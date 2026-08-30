@@ -174,6 +174,18 @@ Item {
     implicitWidth: root.width
     implicitHeight: root.height
 
+    function pendingWorkspaceIdForAddress(address) {
+        const pending = GlobalStates.overviewPendingWindowWorkspaceByAddress ?? {};
+        return Number(pending[address] ?? pending[ServiceManager.workspace.normalizeAddress(address)] ?? 0);
+    }
+
+    function effectiveWorkspaceId(win, address) {
+        const pendingId = root.pendingWorkspaceIdForAddress(address || win?.address);
+        if (pendingId > 0)
+            return pendingId;
+        return win?.workspace?.id ?? -1;
+    }
+
     function normalizedSearchQuery() {
         return String(root.searchQuery || "").toLowerCase().trim();
     }
@@ -789,42 +801,40 @@ Item {
                     values: {
                         // Register modelRevision as a dependency.
                         const _rev = root.modelRevision;
+                        const _pending = GlobalStates.overviewPendingWindowWorkspaceByAddress;
                         void _rev;
+                        void _pending;
                         return ToplevelManager.toplevels.values.map((toplevel) => {
-                            const rawAddress = String(toplevel.HyprlandToplevel?.address ?? "");
-                            const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
-                            var win = windowByAddress[address]
-                            if (!win?.workspace?.id)
+                            const address = ServiceManager.workspace.normalizeAddress(toplevel.HyprlandToplevel?.address);
+                            const win = ServiceManager.workspace.clientByAddress(address);
+                            if (!win?.mapped || win?.hidden)
                                 return "";
-                            if (!root.overviewEntryIds.includes(win.workspace.id))
+                            const wsId = root.effectiveWorkspaceId(win, address);
+                            if (wsId < 1)
                                 return "";
-                            const captureRevision = Number(
-                                GlobalStates.overviewWorkspaceCaptureRevision[win.workspace.id] ?? 0
-                            );
-                            return `${address}|${win.workspace.id}|${captureRevision}`;
+                            if (!root.overviewEntryIds.includes(wsId)
+                                && !root.overviewEntryIds.includes(win.workspace?.id))
+                                return "";
+                            return address;
                         }).filter(key => key.length > 0)
                     }
                 }
                 delegate: OverviewWindow {
                     id: window
                     required property string modelData
-                    required property int index
                     property int monitorId: windowData?.monitor
                     property var monitor: ServiceManager.workspace.monitors.find(m => m.id == monitorId)
-                    property string address: modelData.split("|")[0]
+                    property string address: modelData
                     property var modelToplevel: {
                         const values = ToplevelManager.toplevels.values;
                         for (let i = 0; i < values.length; ++i) {
-                            const rawAddress = String(values[i].HyprlandToplevel?.address ?? "");
-                            const candidate = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
-                            if (candidate === address)
+                            if (ServiceManager.workspace.normalizeAddress(values[i].HyprlandToplevel?.address) === address)
                                 return values[i];
                         }
                         return null;
                     }
                     toplevel: modelToplevel
-                    captureActive: GlobalStates.overviewOpen && visible && !!modelToplevel
-                    captureDelayMs: (index % 12) * 80
+                    captureActive: GlobalStates.overviewOpen
                     monitorData: this.monitor
                     scale: root.scale
                     scaleX: {
@@ -842,11 +852,27 @@ Item {
                         return root.entryHeight(workspaceEntryIndex) / logicalHeight;
                     }
                     widgetMonitor: ServiceManager.workspace.monitors.find(m => m.id == root.monitor.id)
-                    windowData: windowByAddress[address]
+                    property var liveWindowData: ServiceManager.workspace.clientByAddress(address)
+                    property var cachedWindowData: null
+                    windowData: liveWindowData ?? cachedWindowData
+                    onLiveWindowDataChanged: {
+                        if (liveWindowData)
+                            cachedWindowData = liveWindowData;
+                    }
 
-                    // Offset on the canvas
-                    property int workspaceEntryIndex: root.indexForWorkspaceId(windowData?.workspace.id)
-                    visible: workspaceEntryIndex >= 0 && !!windowData
+                    readonly property int liveWorkspaceId: root.effectiveWorkspaceId(window.windowData, address)
+                    property int stickyWorkspaceIndex: -1
+                    readonly property int resolvedWorkspaceIndex: root.indexForWorkspaceId(liveWorkspaceId)
+                    property int workspaceEntryIndex: resolvedWorkspaceIndex >= 0
+                        ? resolvedWorkspaceIndex
+                        : stickyWorkspaceIndex
+                    Binding {
+                        target: window
+                        property: "stickyWorkspaceIndex"
+                        value: window.resolvedWorkspaceIndex
+                        when: window.resolvedWorkspaceIndex >= 0
+                    }
+                    visible: workspaceEntryIndex >= 0
                     xOffset: root.entryX(Math.max(0, workspaceEntryIndex))
                     yOffset: root.entryY(Math.max(0, workspaceEntryIndex))
                     workspaceWidth: root.entryWidth(Math.max(0, workspaceEntryIndex))
@@ -872,17 +898,6 @@ Item {
                     topRightRadius: Math.max((workspaceAtTopRight ? root.largeWorkspaceRadius : root.smallWorkspaceRadius) - distanceFromTopRightCorner, minRadius)
                     bottomLeftRadius: Math.max((workspaceAtBottomLeft ? root.largeWorkspaceRadius : root.smallWorkspaceRadius) - distanceFromBottomLeftCorner, minRadius)
                     bottomRightRadius: Math.max((workspaceAtBottomRight ? root.largeWorkspaceRadius : root.smallWorkspaceRadius) - distanceFromBottomRightCorner, minRadius)
-
-                    Timer {
-                        id: updateWindowPosition
-                        interval: Config.options.hacks.arbitraryRaceConditionDelay
-                        repeat: false
-                        running: false
-                        onTriggered: {
-                            window.x = Math.round(xWithinWorkspaceWidget + xOffset)
-                            window.y = Math.round(yWithinWorkspaceWidget + yOffset)
-                        }
-                    }
 
                     z: Drag.active ? root.windowDraggingZ : (root.windowZ + window.windowData?.floating + window.windowData?.fullscreen * 2)
                     Drag.hotSpot.x: width / 2
@@ -915,6 +930,7 @@ Item {
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         drag.target: parent
                         onPressed: (mouse) => {
+                            window.snapshotPreview(false)
                             WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace.id)
                             window.pressed = true
                             window.Drag.active = true
@@ -927,15 +943,15 @@ Item {
                             const targetWorkspace = GlobalStates.overviewDraggingTargetWorkspace
                             const targetIsTrailing = GlobalStates.overviewDraggingTargetIsTrailing
                             window.pressed = false
+                            window.holdCurrentPosition()
                             window.Drag.active = false
+                            window.restorePositionBinding()
                             if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing)) {
-                                updateWindowPosition.restart()
+                                window.releaseHeldPosition()
+                                return
                             }
-                            else {
-                                if (!window.windowData.floating) {
-                                    updateWindowPosition.restart()
-                                    return
-                                }
+                            window.releaseHeldPosition()
+                            if (window.windowData.floating) {
                                 const percentageX = (window.x - xOffset) / root.entryWidth(workspaceEntryIndex)
                                 const percentageY = (window.y - yOffset) / root.entryHeight(workspaceEntryIndex)
                                 Hyprland.dispatch(`hl.dsp.window.move({ x = "${percentageX * (monitor?.width ?? root.screen.width)}", y = "${percentageY * (monitor?.height ?? root.screen.height)}", window = "address:${window.windowData?.address}" })`)
