@@ -51,11 +51,27 @@ Singleton {
 
     // Convenient stuff
 
+    function normalizeAddress(address) {
+        const raw = String(address ?? "");
+        if (raw.length === 0)
+            return "";
+        return raw.startsWith("0x") ? raw : `0x${raw}`;
+    }
+
+    function clientByAddress(address) {
+        const raw = String(address ?? "");
+        if (raw.length === 0)
+            return null;
+        const byAddr = root.windowByAddress ?? {};
+        return byAddr[raw]
+            ?? byAddr[root.normalizeAddress(raw)]
+            ?? byAddr[raw.startsWith("0x") ? raw.slice(2) : raw]
+            ?? null;
+    }
+
     function toplevelsForWorkspace(workspace) {
         return ToplevelManager.toplevels.values.filter(toplevel => {
-            const rawAddress = String(toplevel.HyprlandToplevel?.address ?? "");
-            const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
-            var win = HyprlandData.windowByAddress[address];
+            const win = root.clientByAddress(toplevel.HyprlandToplevel?.address);
             return win?.workspace?.id === workspace;
         })
     }
@@ -434,9 +450,7 @@ Singleton {
         if (!toplevel || !toplevel.HyprlandToplevel) {
             return null;
         }
-        const rawAddress = String(toplevel?.HyprlandToplevel?.address ?? "");
-        const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
-        return root.windowByAddress[address];
+        return root.clientByAddress(toplevel.HyprlandToplevel.address);
     }
 
     function monitorActiveWorkspaceId(monitor) {
@@ -566,27 +580,7 @@ Singleton {
                 // stdout; JSON.parse("") would log a SyntaxError per poll.
                 if (!root.hyprlandIpcAvailable || !clientsCollector.text.trim())
                     return;
-                const nextWindowList = JSON.parse(clientsCollector.text);
-                const affectedWorkspaces = [];
-                const previousByAddress = root.windowByAddress ?? {};
-                const nextByAddress = {};
-                for (const win of nextWindowList)
-                    nextByAddress[win.address] = win;
-                for (const address of Object.keys(previousByAddress)) {
-                    const previousWorkspace = previousByAddress[address]?.workspace?.id;
-                    const nextWorkspace = nextByAddress[address]?.workspace?.id;
-                    if (previousWorkspace !== nextWorkspace) {
-                        affectedWorkspaces.push(previousWorkspace, nextWorkspace);
-                    }
-                }
-                for (const address of Object.keys(nextByAddress)) {
-                    if (!previousByAddress[address])
-                        affectedWorkspaces.push(nextByAddress[address]?.workspace?.id);
-                }
-                if (affectedWorkspaces.length > 0)
-                    GlobalStates.refreshWorkspaceCaptures(affectedWorkspaces);
-
-                root.windowList = nextWindowList
+                root.windowList = JSON.parse(clientsCollector.text)
                 let tempWinByAddress = {};
                 for (var i = 0; i < root.windowList.length; ++i) {
                     var win = root.windowList[i];
@@ -595,6 +589,18 @@ Singleton {
                 root.windowByAddress = tempWinByAddress;
                 root.addresses = root.windowList.map(win => win.address);
                 root.clientsLoaded = true;
+                const pendingWindows = GlobalStates.overviewPendingWindowWorkspaceByAddress ?? {};
+                const remainingPendingWindows = Object.assign({}, pendingWindows);
+                let pendingWindowsChanged = false;
+                for (const address of Object.keys(pendingWindows)) {
+                    const win = root.clientByAddress(address);
+                    if (win?.workspace?.id === pendingWindows[address]) {
+                        delete remainingPendingWindows[address];
+                        pendingWindowsChanged = true;
+                    }
+                }
+                if (pendingWindowsChanged)
+                    GlobalStates.overviewPendingWindowWorkspaceByAddress = remainingPendingWindows;
                 const suppressed = root.suppressedEmptyWorkspaceIds();
                 if (suppressed.length > 0) {
                     GlobalStates.overviewSuppressedEmptyWorkspaceIds = suppressed.filter(wsId =>

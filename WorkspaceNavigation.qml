@@ -185,6 +185,8 @@ Singleton {
         const entry = model.find(item => item.id === targetWorkspace);
         const targetMonitorName = entry?.monitorName ?? "";
 
+        GlobalStates.setPendingWindowWorkspace(windowAddress, targetWorkspace);
+
         if (targetMonitorName.length > 0) {
             const pending = GlobalStates.overviewPendingWorkspaceMonitorById ?? {};
             const nextPending = Object.assign({}, pending);
