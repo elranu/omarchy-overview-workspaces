@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import "."
 import qs.Commons
 import qs.Ui
-import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -13,6 +12,7 @@ Item { // Window
     id: root
     property var toplevel
     property var windowData
+    property bool captureActive: true
     property var monitorData
     property var scale
     property real scaleX: scale * widthRatio
@@ -120,22 +120,8 @@ Item { // Window
     property real topRightRadius: 0
     property real bottomLeftRadius: 0
     property real bottomRightRadius: 0
-    // Rounded-corner masking via layer+OpacityMask adds an offscreen render
-    // pass per window. Keep it in balanced/visuals modes for the frosted
-    // rounded look; in performance mode skip it (square previews) to avoid
-    // N offscreen passes — especially costly when ScreencopyView is live.
     readonly property bool perfMode: (Persistent.states?.display?.optimization ?? "balanced") === "performance"
-    layer.enabled: !perfMode
-    layer.effect: OpacityMask {
-        maskSource: Rectangle {
-            width: root.width
-            height: root.height
-            topLeftRadius: root.topLeftRadius
-            topRightRadius: root.topRightRadius
-            bottomRightRadius: root.bottomRightRadius
-            bottomLeftRadius: root.bottomLeftRadius
-        }
-    }
+    clip: true
 
     Behavior on x {
         enabled: !root.perfMode
@@ -157,24 +143,8 @@ Item { // Window
     ScreencopyView {
         id: windowPreview
         anchors.fill: parent
-        // Keep the capture stream alive for every workspace window. The
-        // overview is expected to show window thumbnails immediately, even
-        // when the shell is using its performance profile; using a gated
-        // single-frame capture made thumbnails appear only after hover.
-        captureSource: root.toplevel
-        live: true
-
-        // Also request an immediate frame when the overview opens. This
-        // avoids waiting for the first live-stream tick after a long close.
-        Connections {
-            target: GlobalStates
-            function onOverviewOpenChanged() {
-                if (GlobalStates.overviewOpen)
-                    windowPreview.captureFrame()
-            }
-        }
-
-        Component.onCompleted: windowPreview.captureFrame()
+        captureSource: root.captureActive ? root.toplevel : null
+        live: root.captureActive
 
         // Color overlay for interactions
         Rectangle {

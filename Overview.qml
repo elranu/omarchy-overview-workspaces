@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import "."
+import qs.Commons
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -63,13 +64,6 @@ Scope {
 
     function overviewNavigationActive() {
         return OverviewSwitchingController.navigationOpen();
-    }
-
-    function setWindowMouseBindings(enabled) {
-        const script = enabled
-            ? "hyprctl eval 'hl.unbind(\"SUPER + mouse:272\"); hl.unbind(\"SUPER + mouse:273\"); hl.bind(\"SUPER + mouse:272\", hl.dsp.window.drag(), { mouse = true, description = \"Move window\" }); hl.bind(\"SUPER + mouse:273\", hl.dsp.window.resize(), { mouse = true, description = \"Resize window\" })' >/dev/null 2>&1 || true"
-            : "hyprctl eval 'hl.unbind(\"SUPER + mouse:272\"); hl.unbind(\"SUPER + mouse:273\")' >/dev/null 2>&1 || true";
-        Quickshell.execDetached(["bash", "-lc", script]);
     }
 
     function handleOverviewNavigationKey(event) {
@@ -137,13 +131,6 @@ Scope {
         if (!entry.isTrailingEmpty && ServiceManager.workspace.workspaceHasVisibleWindows(entry.id))
             GlobalStates.promoteWorkspaceMru(entry.id);
     }
-
-    Component.onCompleted: {
-        if (GlobalStates.overviewOpen)
-            overviewScope.setWindowMouseBindings(false);
-    }
-
-    Component.onDestruction: overviewScope.setWindowMouseBindings(true)
 
     Connections {
         target: Hyprland
@@ -219,7 +206,6 @@ Scope {
             Connections {
                 target: GlobalStates
                 function onOverviewOpenChanged() {
-                    overviewScope.setWindowMouseBindings(GlobalStates.overviewOpen === false);
                     if (!GlobalStates.overviewOpen) {
                         const settled = GlobalStates.overviewFocusedWorkspaceId > 0
                             ? GlobalStates.overviewFocusedWorkspaceId

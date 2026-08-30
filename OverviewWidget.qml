@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import "."
 import qs.Commons
 import qs.Ui
-import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -573,7 +572,7 @@ Item {
         acceptedButtons: Qt.NoButton
         onWheel: wheel => {
             const r = WheelUtils.getSteps(wheel.angleDelta.y, root.wheelAccum)
-            root.wheelAccum = r.accum
+            root.wheelAccum = r.accumulator
             if (r.steps > 0)
                 Hyprland.dispatch("hl.dsp.global('quickshell:overviewPrev')")
             else if (r.steps < 0)
@@ -682,21 +681,9 @@ Item {
                     border.width: 0
                     clip: true
 
-                    // Inner content container clipped by OpacityMask
                     Item {
                         id: workspaceContent
                         anchors.fill: parent
-                        layer.enabled: true
-                        layer.effect: OpacityMask {
-                            maskSource: Rectangle {
-                                width: workspaceContent.width
-                                height: workspaceContent.height
-                                topLeftRadius: workspace.topLeftRadius
-                                topRightRadius: workspace.topRightRadius
-                                bottomLeftRadius: workspace.bottomLeftRadius
-                                bottomRightRadius: workspace.bottomRightRadius
-                            }
-                        }
 
                         // Wallpaper background for all workspaces (including trailing empty)
                         Rectangle {
@@ -803,22 +790,36 @@ Item {
                         // Register modelRevision as a dependency.
                         const _rev = root.modelRevision;
                         void _rev;
-                        return ToplevelManager.toplevels.values.filter((toplevel) => {
-                            const address = `0x${toplevel.HyprlandToplevel?.address}`
+                        return ToplevelManager.toplevels.values.map((toplevel) => {
+                            const rawAddress = String(toplevel.HyprlandToplevel?.address ?? "");
+                            const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
                             var win = windowByAddress[address]
                             if (!win?.workspace?.id)
-                                return false;
-                            return root.overviewEntryIds.includes(win.workspace.id);
-                        })
+                                return "";
+                            if (!root.overviewEntryIds.includes(win.workspace.id))
+                                return "";
+                            return `${address}|${win.workspace.id}`;
+                        }).filter(key => key.length > 0)
                     }
                 }
                 delegate: OverviewWindow {
                     id: window
-                    required property var modelData
+                    required property string modelData
                     property int monitorId: windowData?.monitor
                     property var monitor: ServiceManager.workspace.monitors.find(m => m.id == monitorId)
-                    property var address: `0x${modelData.HyprlandToplevel.address}`
-                    toplevel: modelData
+                    property string address: modelData.split("|")[0]
+                    property var modelToplevel: {
+                        const values = ToplevelManager.toplevels.values;
+                        for (let i = 0; i < values.length; ++i) {
+                            const rawAddress = String(values[i].HyprlandToplevel?.address ?? "");
+                            const candidate = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
+                            if (candidate === address)
+                                return values[i];
+                        }
+                        return null;
+                    }
+                    toplevel: modelToplevel
+                    captureActive: GlobalStates.overviewOpen && visible && !!modelToplevel
                     monitorData: this.monitor
                     scale: root.scale
                     scaleX: {

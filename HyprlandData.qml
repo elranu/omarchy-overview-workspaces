@@ -53,7 +53,8 @@ Singleton {
 
     function toplevelsForWorkspace(workspace) {
         return ToplevelManager.toplevels.values.filter(toplevel => {
-            const address = `0x${toplevel.HyprlandToplevel?.address}`;
+            const rawAddress = String(toplevel.HyprlandToplevel?.address ?? "");
+            const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
             var win = HyprlandData.windowByAddress[address];
             return win?.workspace?.id === workspace;
         })
@@ -433,7 +434,8 @@ Singleton {
         if (!toplevel || !toplevel.HyprlandToplevel) {
             return null;
         }
-        const address = `0x${toplevel?.HyprlandToplevel?.address}`;
+        const rawAddress = String(toplevel?.HyprlandToplevel?.address ?? "");
+        const address = rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`;
         return root.windowByAddress[address];
     }
 
