@@ -1,7 +1,10 @@
 # Overview Workspaces
 
-## 0.1.2
+## 0.1.3
 
+- Added the current plugin version to the workspace-order popup.
+- Made the popup options responsive and scrollable when large text or a
+  smaller display leaves less vertical space.
 - Adapted the settings panel and overview scrim to theme-derived popup and
   background colors; removed the hard-coded dark scrim color.
 
