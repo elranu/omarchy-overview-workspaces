@@ -40,14 +40,22 @@ Singleton {
         root.evaluateGuards();
     }
 
+    // A reload landing mid-run would otherwise be dropped, leaving whenResults
+    // describing the previous set of items. Remember that it happened and run
+    // again once the current batch exits.
+    property bool guardsPending: false
+
     function evaluateGuards() {
         const script = MenuIndex.guardScript(root.items);
         if (!script) {
             root.whenResults = ({});
             return;
         }
-        if (guardProc.running)
+        if (guardProc.running) {
+            root.guardsPending = true;
             return;
+        }
+        root.guardsPending = false;
         guardProc.collected = "";
         guardProc.command = ["bash", "-lc", script];
         guardProc.running = true;
@@ -121,8 +129,17 @@ Singleton {
         }
 
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0 || exitStatus !== 0)
+            // A batch that was killed rather than finished only reported the rows
+            // it reached, so the last complete set is kept instead of a partial
+            // one. Clearing it here would be worse than stale: with no answers at
+            // all every guarded action passes, which is exactly what evaluating
+            // guards is meant to prevent. A signal leaves the exit code at 0, so
+            // the status is what tells us.
+            if (exitCode !== 0 || exitStatus !== 0) {
+                if (root.guardsPending)
+                    Qt.callLater(() => root.evaluateGuards());
                 return;
+            }
             const next = ({});
             const lines = guardProc.collected.split("\n");
             for (let i = 0; i < lines.length; ++i) {
@@ -141,6 +158,8 @@ Singleton {
                     next[rest.substring(0, tagAt)] = value;
             }
             root.whenResults = next;
+            if (root.guardsPending)
+                Qt.callLater(() => root.evaluateGuards());
         }
     }
 }
