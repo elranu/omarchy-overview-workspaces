@@ -300,8 +300,7 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
-                    // ── Search mode keyboard handling (DISABLED: search UI removed) ──
-                    /*
+                    // ── Search mode keyboard handling ──
                     if (GlobalStates.overviewSearchMode) {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             overviewSearch.activateSelection();
@@ -358,7 +357,6 @@ Scope {
                         event.accepted = true;
                         return;
                     }
-                    */
                     // Arrow keys navigate workspaces in workspace mode
                     if (!GlobalStates.overviewSearchMode) {
                         overviewScope.handleOverviewNavigationKey(event);
