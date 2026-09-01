@@ -26,6 +26,19 @@ Singleton {
     function overviewModel() {
         if (OverviewSwitchingController.grabbed)
             return switchingModeModel();
+        // El teclado tiene que recorrer exactamente las tarjetas que se ven. Sin
+        // esto, en per-monitor las flechas saltan a workspaces del otro monitor
+        // que este overlay no dibuja.
+        if (Config?.options.overview.perMonitor ?? true) {
+            const anchor = GlobalStates.overviewAnchorMonitorName
+                || Hyprland.focusedMonitor?.name
+                || "";
+            if (anchor.length > 0) {
+                const scoped = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(anchor, true, {}, false);
+                if (scoped.length > 0)
+                    return scoped;
+            }
+        }
         return ServiceManager.workspace.overviewWorkspaceEntriesGroupedByMonitor();
     }
 

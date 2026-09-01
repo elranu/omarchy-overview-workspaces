@@ -37,7 +37,24 @@ Item {
         void _rev;
         if (OverviewSwitchingController.grabbed)
             return WorkspaceNavigation.switchingModeModel() ?? [];
-        return root.filteredOverviewEntries(ServiceManager.workspace.overviewWorkspaceEntries ?? []);
+        return root.filteredOverviewEntries(root.scopedOverviewEntries());
+    }
+
+    // En modo per-monitor cada overlay pide las entries de su propia pantalla en
+    // vez de la lista global. Filtrar aca y no en el render deja intactos los
+    // calculos de grilla, alto y aspecto: monitorGroups se deriva de esta lista,
+    // asi que pasa a tener un solo grupo sin tocar el layout.
+    function scopedOverviewEntries() {
+        const all = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
+        if (!(Config?.options.overview.perMonitor ?? true))
+            return all;
+        const name = root.monitor?.name ?? "";
+        if (name.length === 0)
+            return all;
+        const own = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(name, true, {}, false) ?? [];
+        // Si Hyprland todavia no reporto este monitor, mostrar todo es mejor
+        // que dejar la pantalla en blanco.
+        return own.length > 0 ? own : all;
     }
     readonly property var overviewEntryIds: (root.overviewEntries ?? []).map(entry => entry.id)
     readonly property var searchMatchWorkspaceIds: {
