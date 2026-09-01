@@ -773,17 +773,17 @@ Item {
                         onPressed: {
                             if (GlobalStates.overviewDraggingTargetWorkspace === -1) {
                                 if (workspace.isTrailingEmpty) {
-                                    GlobalStates.overviewOpen = false;
                                     if (workspace.monitorName.length > 0)
                                         Hyprland.dispatch(`hl.dsp.focus({monitor="${workspace.monitorName}"})`);
                                     Hyprland.dispatch(`hl.dsp.focus({ workspace = ${workspace.workspaceValue} })`);
                                     if (workspace.monitorName.length > 0)
                                         Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${workspace.workspaceValue}", monitor = "${workspace.monitorName}" })`);
+                                    GlobalStates.overviewOpen = false;
                                 } else {
                                     if (ServiceManager.workspace.workspaceHasVisibleWindows(workspace.workspaceValue))
                                         GlobalStates.promoteWorkspaceMru(workspace.workspaceValue);
-                                    GlobalStates.overviewOpen = false;
                                     root.dispatchFocusWorkspace(workspace.workspaceValue);
+                                    GlobalStates.overviewOpen = false;
                                 }
                             }
                         }
@@ -978,8 +978,14 @@ Item {
                             if (!window.windowData) return;
 
                             if (event.button === Qt.LeftButton) {
-                                GlobalStates.overviewOpen = false;
+                                // Dispatch before dismissing. Closing the layer
+                                // surface first hands focus back to whatever was
+                                // active, and that restore races the focus we are
+                                // about to ask for -- when it wins, the click
+                                // appears to do nothing and the previous window
+                                // stays. OverviewSearch already ordered it this way.
                                 WorkspaceNavigation.focusWindow(window.windowData);
+                                GlobalStates.overviewOpen = false;
                                 event.accepted = true;
                             } else if (event.button === Qt.MiddleButton) {
                                 Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
