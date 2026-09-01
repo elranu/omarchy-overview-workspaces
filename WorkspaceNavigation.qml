@@ -26,9 +26,9 @@ Singleton {
     function overviewModel() {
         if (OverviewSwitchingController.grabbed)
             return switchingModeModel();
-        // El teclado tiene que recorrer exactamente las tarjetas que se ven. Sin
-        // esto, en per-monitor las flechas saltan a workspaces del otro monitor
-        // que este overlay no dibuja.
+        // The keyboard must walk exactly the cards on screen. Without this, in
+        // per-monitor mode the arrow keys step onto workspaces belonging to another
+        // monitor that this overlay does not draw.
         if (GlobalStates.overviewPerMonitor) {
             const anchor = GlobalStates.overviewAnchorMonitorName
                 || Hyprland.focusedMonitor?.name

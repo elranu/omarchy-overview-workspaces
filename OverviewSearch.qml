@@ -160,9 +160,9 @@ Item {
     onQueryChanged: selectedIndex = 0
 
 
-    // Barra de query: muestra lo que se esta tipeando, encima de los overviews.
-    // Aparece apenas se entra en searchMode, incluso sin texto todavia, para que
-    // quede claro que el teclado ya no navega workspaces.
+    // Query bar: shows what is being typed, above the workspace cards. It appears
+    // as soon as search mode starts, even before any text, so it is clear the
+    // keyboard no longer navigates workspaces.
     Rectangle {
         id: queryBar
         property bool cursorOn: true
@@ -201,7 +201,7 @@ Item {
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.hasQuery ? root.query : "Escribi para buscar    >  comando de shell"
+                text: root.hasQuery ? root.query : "Type to search    >  shell command"
                 color: root.hasQuery ? TuiStyle.fg : TuiStyle.dim
                 font.pixelSize: 15
                 elide: Text.ElideLeft
@@ -353,7 +353,7 @@ Item {
                     visible: root.totalResults === 0
                     text: root.commandMode
                         ? "Type a command after >"
-                        : "Sin coincidencias en apps, ventanas ni el menu"
+                        : "No matching applications, windows or menu actions"
                     color: TuiStyle.dim
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

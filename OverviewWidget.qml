@@ -40,10 +40,10 @@ Item {
         return root.filteredOverviewEntries(root.scopedOverviewEntries());
     }
 
-    // En modo per-monitor cada overlay pide las entries de su propia pantalla en
-    // vez de la lista global. Filtrar aca y no en el render deja intactos los
-    // calculos de grilla, alto y aspecto: monitorGroups se deriva de esta lista,
-    // asi que pasa a tener un solo grupo sin tocar el layout.
+    // In per-monitor mode each overlay asks for its own screen's entries instead
+    // of the global list. Scoping here rather than in the renderer leaves the
+    // grid, height and aspect maths untouched: monitorGroups is derived from this
+    // list, so it collapses to a single group on its own.
     function scopedOverviewEntries() {
         const all = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
         if (!GlobalStates.overviewPerMonitor)
@@ -52,8 +52,8 @@ Item {
         if (name.length === 0)
             return all;
         const own = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(name, true, {}, false) ?? [];
-        // Si Hyprland todavia no reporto este monitor, mostrar todo es mejor
-        // que dejar la pantalla en blanco.
+        // If Hyprland has not reported this monitor yet, showing everything beats
+        // leaving the screen blank.
         return own.length > 0 ? own : all;
     }
     readonly property var overviewEntryIds: (root.overviewEntries ?? []).map(entry => entry.id)

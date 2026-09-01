@@ -1,18 +1,18 @@
-// Indice buscable del command menu de Omarchy (el de Super+Space).
+// Searchable index of Omarchy's command menu (the Super+Space one).
 //
-// Implementacion propia y autocontenida. Deliberadamente NO importa
-// /usr/share/omarchy/shell/plugins/menu/MenuModel.js: los imports de JS en QML
-// son estaticos, Omarchy resuelve su prefijo por $OMARCHY_PATH y en NixOS eso no
-// es /usr/share/omarchy, asi que una ruta fija romperia la carga del plugin
-// entero en vez de degradar la busqueda.
+// Self-contained implementation. It deliberately does NOT import
+// /usr/share/omarchy/shell/plugins/menu/MenuModel.js: QML resolves JS imports
+// statically, Omarchy resolves its prefix from $OMARCHY_PATH, and on NixOS that
+// is not /usr/share/omarchy -- so a fixed path would fail to load the entire
+// plugin instead of degrading the search.
 //
-// Solo cubre lo necesario para buscar acciones ejecutables. Queda afuera a
-// proposito todo lo que hace falta para *navegar* el menu: providers, filas de
-// apps, rutas por alias y el marcador `checked`.
+// It covers only what searching executable actions needs. Everything required to
+// *navigate* the menu is intentionally left out: providers, app rows, alias
+// routes and the `checked` marker.
 
 .pragma library
 
-// ── Parseo del JSONC ───────────────────────────────────────────────────────
+// ── JSONC parsing ──────────────────────────────────────────────────────────
 
 function stripJsonc(raw) {
     return String(raw || "")
@@ -28,9 +28,9 @@ function normalizeAliases(value) {
     return [];
 }
 
-// Los ids con puntos definen la jerarquia: trigger.share.file cuelga de
-// trigger.share. El kind se infiere: action -> action, target -> link, resto
-// submenu.
+// Dotted ids define the hierarchy: trigger.share.file belongs under
+// trigger.share. Kind is inferred: action -> action, target -> link, otherwise
+// a submenu.
 function normalizeItem(id, raw) {
     var value = raw || {};
     var parent = value.parent;
@@ -79,9 +79,9 @@ function parseMenuJsonc(raw) {
     return out;
 }
 
-// El jsonc del usuario pisa al default por id. Devuelve objetos nuevos en vez de
-// escribir sobre los que recibe: viven en propiedades `var` de QML y el motor a
-// veces descarta una escritura in-place.
+// The user's jsonc overrides the default by id. Returns fresh objects rather
+// than writing into the ones it is handed: those live in QML `var` properties,
+// where the engine occasionally drops an in-place write.
 function mergeMenuSources(defaultItems, userItems) {
     var items = {};
     var order = [];
@@ -106,7 +106,7 @@ function item(items, id) {
     return items && items[id] ? items[id] : null;
 }
 
-// ── Jerarquia ──────────────────────────────────────────────────────────────
+// ── Hierarchy ──────────────────────────────────────────────────────────────
 
 function depthFor(items, id) {
     var depth = 0;
@@ -169,9 +169,9 @@ function termInSearchWords(term, text) {
     return false;
 }
 
-// Cada termino tiene que aparecer en el nombre o como palabra entera de la
-// descripcion. Una subcadena suelta de la descripcion no alcanza: "in" no
-// deberia traer todo lo que diga "install".
+// Every term must appear in the name, or as a whole word of the description. A
+// bare substring of the description is not enough: "in" should not pull in
+// everything that says "install".
 function matchesQuery(entry, query) {
     if (!entry || entry.id === "root")
         return false;
@@ -192,9 +192,9 @@ function matchesQuery(entry, query) {
     return true;
 }
 
-// Menor es mejor. El label exacto gana, despues prefijo, despues subcadena, y al
-// final los que solo matchean por descripcion. Se desempata por profundidad y
-// por orden de declaracion, para que el resultado sea estable.
+// Lower is better. An exact label wins, then a prefix, then a substring, and
+// last the entries matching on description only. Ties break by depth and then
+// declaration order, so the ranking is stable.
 function searchScore(items, entry, query) {
     var needle = String(query || "").toLowerCase().trim();
     var label = String(entry.label || "").toLowerCase();
@@ -218,16 +218,16 @@ function searchScore(items, entry, query) {
 
 // ── Guards ─────────────────────────────────────────────────────────────────
 
-// Un unico script bash que resuelve todos los `when:` de una pasada e imprime
-// "<id>:w:<0|1>" por linea. Se hace en batch porque son ~144 condiciones y un
-// proceso por cada una tardaria muchisimo mas.
+// A single bash script that resolves every `when:` in one pass, printing
+// "<id>:w:<0|1>" per line. Batching matters: there are ~144 conditions, and one
+// process each would take far longer.
 //
-// A diferencia de Omarchy no se emite un prelude que cachee pacman: sus helpers
-// (omarchy-pkg-present, omarchy-cmd-present) existen como binarios reales en
-// $OMARCHY_PATH/bin, asi que las expresiones corren igual. Medido en esta
-// maquina: 2.87 s contra 2.22 s del batch optimizado, con resultados identicos
-// en los 144 guards. La diferencia no se nota porque esto corre en background y
-// el resultado queda cacheado.
+// Unlike Omarchy, no pacman-caching prelude is emitted: the helpers it relies on
+// (omarchy-pkg-present, omarchy-cmd-present) exist as real binaries in
+// $OMARCHY_PATH/bin, so the expressions run either way. Measured here at 2.87s
+// against 2.22s for the optimised batch, with identical results across all 144
+// guards. The difference goes unnoticed because this runs in the background and
+// the answers are cached.
 function guardScript(items) {
     var script = "";
     var ids = Object.keys(items || {});

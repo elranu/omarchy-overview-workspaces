@@ -6,22 +6,23 @@ import Quickshell
 import Quickshell.Io
 import "MenuIndex.js" as MenuIndex
 
-// Busqueda dentro del command menu de Omarchy (el de Super+Space, id omarchy.menu).
+// Search inside Omarchy's command menu (the Super+Space one, id omarchy.menu).
 //
-// El modelo vive en MenuIndex.js, propio y autocontenido. No se importa el
-// MenuModel.js de Omarchy porque los imports de JS en QML son estaticos y la
-// ruta depende de $OMARCHY_PATH (en NixOS no es /usr/share/omarchy): una ruta
-// fija romperia la carga del plugin entero en vez de degradar la busqueda.
+// The model lives in MenuIndex.js, written here and self-contained. Omarchy's
+// MenuModel.js is deliberately not imported: QML resolves JS imports statically
+// while Omarchy's prefix comes from $OMARCHY_PATH, which is not
+// /usr/share/omarchy on NixOS. A fixed path would fail to load the whole plugin
+// rather than degrade this one feature.
 //
-// Lo importante son los guards: 144 de las 263 acciones del menu traen un `when:`
-// (una condicion de shell). Sin evaluarlas ofreceriamos cosas como Hibernate en
-// una maquina que no hiberna. guardScript() arma UN solo script bash que las
-// resuelve todas de una pasada.
+// The guards are what matter: 144 of the menu's 263 actions carry a `when:`
+// shell condition. Without evaluating them we would offer things like Hibernate
+// on a machine that cannot hibernate. guardScript() resolves them all in a
+// single batched bash run.
 Singleton {
     id: root
 
-    // Misma razon que arriba: el prefijo de Omarchy sale del entorno, no se
-    // hardcodea. El fallback cubre el caso de que la variable no este seteada.
+    // Same reason as above: Omarchy's prefix comes from the environment rather
+    // than being hardcoded. The fallback covers an unset variable.
     readonly property string omarchyPath: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
     readonly property string defaultPath: `${root.omarchyPath}/default/omarchy/omarchy-menu.jsonc`
     readonly property string userPath: `${Quickshell.env("HOME")}/.config/omarchy/extensions/omarchy-menu.jsonc`
@@ -52,8 +53,8 @@ Singleton {
         guardProc.running = true;
     }
 
-    // Solo filas ejecutables. Un `menu` abre un submenu y un `link` navega: ni
-    // uno ni otro tienen sentido como resultado suelto dentro del overview.
+    // Executable rows only. A `menu` opens a submenu and a `link` navigates;
+    // neither makes sense as a standalone result inside the overview.
     function query(text, limit) {
         const needle = String(text || "").trim();
         if (needle.length === 0)
@@ -65,8 +66,8 @@ Singleton {
             const entry = MenuIndex.item(root.items, order[i]);
             if (!entry || entry.kind !== "action" || !entry.action)
                 continue;
-            // Para un `action` la visibilidad es solo su propio guard: Omarchy
-            // tampoco mira los ancestros al resolver una fila ejecutable.
+            // For an `action`, visibility is just its own guard: Omarchy does not
+            // consult ancestors either when resolving an executable row.
             if (entry.when && root.whenResults[entry.id] === false)
                 continue;
             if (!MenuIndex.matchesQuery(entry, needle))
@@ -109,8 +110,8 @@ Singleton {
         onFileChanged: reload()
     }
 
-    // Formato de salida del script: "<id>:<tag>:<0|1>" por linea. Solo nos
-    // interesa el tag "w" (when); "c" (checked) es para el ✓ del menu.
+    // Script output format: "<id>:<tag>:<0|1>" per line. Only the "w" (when) tag
+    // matters here; "c" (checked) drives the menu's ✓ marker.
     Process {
         id: guardProc
         property string collected: ""

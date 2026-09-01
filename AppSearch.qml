@@ -2,12 +2,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Busqueda de aplicaciones para el modo search del overview.
+// Application lookup for the overview's search mode.
 //
-// Antes esto era un stub que devolvia [] y hacia que la seccion "Applications"
-// nunca apareciera. Ahora consulta DesktopEntries, el mismo origen que usa
-// services/AppLibrary.qml de Omarchy, para que los resultados coincidan con los
-// del menu de Super+Space.
+// This used to be a stub returning [], which meant the "Applications" section
+// could never appear. It now queries DesktopEntries, the same source Omarchy's
+// own services/AppLibrary.qml uses, so results agree with the Super+Space menu.
 QtObject {
     id: root
 
@@ -27,9 +26,9 @@ QtObject {
         ].join(" ").toLowerCase();
     }
 
-    // Ordena por que tan "al principio" cae el match: primero los que empiezan
-    // con la query, despues los que la tienen en el nombre, y al final los que
-    // solo matchean por comment/id. Empates alfabeticos.
+    // Ranked by how early the match lands: names starting with the query first,
+    // then names containing it, then entries matching only on comment or id.
+    // Ties break alphabetically.
     function fuzzyQuery(query) {
         const needle = String(query || "").toLowerCase().trim();
         if (needle.length === 0)
@@ -54,9 +53,9 @@ QtObject {
         return scored.map(item => item.entry);
     }
 
-    // uwsm-app deja la app fuera de wayland-wm@.service, y gtk-launch resuelve
-    // ids con espacios o que UWSM rechaza. El sufijo .desktop es obligatorio o
-    // ids como org.telegram.desktop no resuelven. Mismo criterio que AppLibrary.
+    // uwsm-app keeps the app out of wayland-wm@.service, and gtk-launch resolves
+    // ids with spaces or ones UWSM rejects. The .desktop suffix is required or
+    // ids like org.telegram.desktop will not resolve. Same approach as AppLibrary.
     function launchApp(app) {
         const id = String(app?.id || "");
         if (id.length === 0)

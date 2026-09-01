@@ -19,8 +19,8 @@ Panel {
     function close() { root.controller.hide() }
     function toggle() { root.opened ? root.close() : root.open() }
 
-    // Solo tiene sentido ofrecer el alcance del preview cuando hay mas de una
-    // pantalla: con un monitor las dos opciones dibujan exactamente lo mismo.
+    // The preview scope is only worth offering with more than one screen: on a
+    // single monitor both settings draw exactly the same grid.
     readonly property bool multiMonitor: (ServiceManager.workspace.monitors?.length ?? 0) > 1
 
     function persistSetting(key, value) {
