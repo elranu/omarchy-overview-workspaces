@@ -46,13 +46,16 @@ Singleton {
     property bool guardsPending: false
 
     function evaluateGuards() {
+        // The running check comes first: clearing whenResults for an item set with
+        // no guards while a batch is still in flight would let that batch write
+        // the previous set's answers back, with nothing queued to correct it.
+        if (guardProc.running) {
+            root.guardsPending = true;
+            return;
+        }
         const script = MenuIndex.guardScript(root.items);
         if (!script) {
             root.whenResults = ({});
-            return;
-        }
-        if (guardProc.running) {
-            root.guardsPending = true;
             return;
         }
         root.guardsPending = false;
@@ -99,6 +102,18 @@ Singleton {
             return false;
         Quickshell.execDetached(["bash", "-lc", command]);
         return true;
+    }
+
+    // Guards answer questions about live state -- whether a recording is running,
+    // whether a toggle is off -- so answers frozen at shell start go stale. Omarchy
+    // re-evaluates every time its menu opens; the equivalent moment here is the
+    // overview entering search mode.
+    Connections {
+        target: GlobalStates
+        function onOverviewSearchModeChanged() {
+            if (GlobalStates.overviewSearchMode)
+                root.evaluateGuards();
+        }
     }
 
     FileView {

@@ -91,9 +91,18 @@ function mergeMenuSources(defaultItems, userItems) {
         var list = sources[s];
         for (var i = 0; i < list.length; i++) {
             var entry = list[i];
+            if (!entry || !entry.id)
+                continue;
             if (!items[entry.id])
                 order.push(entry.id);
-            items[entry.id] = entry;
+            var prior = items[entry.id] || {};
+            var merged = {};
+            for (var a in prior)
+                merged[a] = prior[a];
+            for (var b in entry)
+                merged[b] = entry[b];
+            merged.id = entry.id;
+            items[entry.id] = merged;
         }
     }
     for (var k = 0; k < order.length; k++)
