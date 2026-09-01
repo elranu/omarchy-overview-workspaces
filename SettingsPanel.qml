@@ -19,14 +19,17 @@ Panel {
     function close() { root.controller.hide() }
     function toggle() { root.opened ? root.close() : root.open() }
 
-    function persistMode(mode) {
-        GlobalStates.overviewSortMode = mode === "legacy" ? "legacy" : "system";
+    // Solo tiene sentido ofrecer el alcance del preview cuando hay mas de una
+    // pantalla: con un monitor las dos opciones dibujan exactamente lo mismo.
+    readonly property bool multiMonitor: (ServiceManager.workspace.monitors?.length ?? 0) > 1
+
+    function persistSetting(key, value) {
         var entry = { id: root.moduleName };
-        for (var key in root.settings) {
-            if (key !== "id")
-                entry[key] = root.settings[key];
+        for (var existing in root.settings) {
+            if (existing !== "id")
+                entry[existing] = root.settings[existing];
         }
-        entry.sortMode = mode;
+        entry[key] = value;
         root.settings = entry;
         if (root.hostWidget && "settings" in root.hostWidget)
             root.hostWidget.settings = entry;
@@ -34,9 +37,20 @@ Panel {
             root.bar.shell.updateEntryInline(root.moduleName, entry);
     }
 
+    function persistMode(mode) {
+        GlobalStates.overviewSortMode = mode === "legacy" ? "legacy" : "system";
+        root.persistSetting("sortMode", mode);
+    }
+
+    function persistPerMonitor(enabled) {
+        GlobalStates.overviewPerMonitor = enabled;
+        root.persistSetting("perMonitor", enabled);
+    }
+
     function syncSettings() {
         const mode = root.setting("sortMode", "legacy") === "legacy" ? "legacy" : "system";
         GlobalStates.overviewSortMode = mode;
+        GlobalStates.overviewPerMonitor = root.setting("perMonitor", true) !== false;
     }
 
     Component.onCompleted: {
@@ -147,6 +161,96 @@ Panel {
                                     anchors.fill: parent
                                     onClicked: root.persistMode(modelData.key)
                                 }
+                            }
+                        }
+
+                        Rectangle {
+                            width: menuColumn.width
+                            height: 1
+                            visible: root.multiMonitor
+                            color: Util.alpha(Color.popups.text, 0.12)
+                        }
+
+                        Text {
+                            visible: root.multiMonitor
+                            text: "Multi-monitor preview"
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            color: root.panelForeground
+                            font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                            font.pixelSize: Style.font.title
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            id: perMonitorRow
+                            visible: root.multiMonitor
+                            width: menuColumn.width
+                            height: perMonitorColumn.implicitHeight + Style.space(16)
+                            color: GlobalStates.overviewPerMonitor
+                                ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.18)
+                                : Util.alpha(Color.popups.text, 0.06)
+                            border.width: 1
+                            border.color: GlobalStates.overviewPerMonitor ? Color.accent : Color.popups.border
+
+                            Column {
+                                id: perMonitorColumn
+                                anchors.left: parent.left
+                                anchors.right: statePill.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.leftMargin: Style.space(8)
+                                anchors.rightMargin: Style.space(8)
+                                spacing: Style.space(2)
+
+                                Text {
+                                    text: "Show only this monitor's workspaces"
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    color: root.panelForeground
+                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                    font.pixelSize: Style.font.body
+                                    font.bold: true
+                                }
+                                Text {
+                                    text: GlobalStates.overviewPerMonitor
+                                        ? "Each screen draws its own workspaces."
+                                        : "Every screen draws all workspaces, including the other monitors'."
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    color: root.panelMuted
+                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                    font.pixelSize: Style.font.caption
+                                }
+                            }
+
+                            Rectangle {
+                                id: statePill
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.rightMargin: Style.space(8)
+                                width: pillLabel.implicitWidth + Style.space(16)
+                                height: pillLabel.implicitHeight + Style.space(6)
+                                radius: height / 2
+                                color: GlobalStates.overviewPerMonitor
+                                    ? Color.accent
+                                    : Util.alpha(Color.popups.text, 0.14)
+
+                                Text {
+                                    id: pillLabel
+                                    anchors.centerIn: parent
+                                    text: GlobalStates.overviewPerMonitor ? "ON" : "OFF"
+                                    color: GlobalStates.overviewPerMonitor
+                                        ? Color.popups.background
+                                        : root.panelMuted
+                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                    font.pixelSize: Style.font.caption
+                                    font.bold: true
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: root.persistPerMonitor(!GlobalStates.overviewPerMonitor)
                             }
                         }
                     }

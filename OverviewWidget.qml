@@ -46,7 +46,7 @@ Item {
     // asi que pasa a tener un solo grupo sin tocar el layout.
     function scopedOverviewEntries() {
         const all = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
-        if (!(Config?.options.overview.perMonitor ?? true))
+        if (!GlobalStates.overviewPerMonitor)
             return all;
         const name = root.monitor?.name ?? "";
         if (name.length === 0)

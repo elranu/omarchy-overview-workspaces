@@ -29,7 +29,7 @@ Singleton {
         // El teclado tiene que recorrer exactamente las tarjetas que se ven. Sin
         // esto, en per-monitor las flechas saltan a workspaces del otro monitor
         // que este overlay no dibuja.
-        if (Config?.options.overview.perMonitor ?? true) {
+        if (GlobalStates.overviewPerMonitor) {
             const anchor = GlobalStates.overviewAnchorMonitorName
                 || Hyprland.focusedMonitor?.name
                 || "";
