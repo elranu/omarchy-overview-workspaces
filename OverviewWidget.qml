@@ -651,10 +651,26 @@ Item {
         border.color: Appearance.colors.colOnLayer1
         opacity: 0.85
 
+        // The window's own contents, so it reads as the window itself crossing
+        // rather than a placeholder standing in for it.
+        Image {
+            id: proxyPreview
+            anchors.fill: parent
+            anchors.margins: 2
+            source: CrossMonitorDrag.previewUrl
+            fillMode: Image.PreserveAspectCrop
+            smooth: true
+            cache: false
+            visible: status === Image.Ready
+        }
+
+        // Fallback for the moment before the first snapshot exists, or a window
+        // whose capture never produced one.
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 10
             spacing: 4
+            visible: !proxyPreview.visible
 
             Image {
                 Layout.alignment: Qt.AlignHCenter
@@ -1048,7 +1064,8 @@ Item {
                             CrossMonitorDrag.begin(window.windowData?.address,
                                 window.windowData?.workspace.id,
                                 root.monitor?.name ?? "",
-                                window.width, window.height)
+                                window.width, window.height,
+                                window.freezeUrl)
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window

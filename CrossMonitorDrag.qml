@@ -39,6 +39,13 @@ Singleton {
     property real sourceWidth: 0
     property real sourceHeight: 0
 
+    // Snapshot of the dragged window's contents. OverviewWindow already keeps one
+    // (grabToImage into freezeUrl, refreshed every 400ms) for its freeze frame,
+    // and both overlays share a QML engine, so the destination can display the
+    // real window instead of a stand-in -- without a second screen capture of a
+    // window already being recorded on the source monitor.
+    property string previewUrl: ""
+
     // Pointer in global coordinates, updated while the drag runs.
     property real pointerX: 0
     property real pointerY: 0
@@ -48,12 +55,13 @@ Singleton {
     // moved or vanished cannot leave a stale target behind for long.
     property var targets: ({})
 
-    function begin(address, workspaceId, monitorName, w, h) {
+    function begin(address, workspaceId, monitorName, w, h, preview) {
         root.windowAddress = String(address ?? "");
         root.sourceWorkspaceId = workspaceId ?? -1;
         root.sourceMonitorName = String(monitorName ?? "");
         root.sourceWidth = w ?? 0;
         root.sourceHeight = h ?? 0;
+        root.previewUrl = String(preview ?? "");
         root.targets = ({});
         root.active = true;
     }
