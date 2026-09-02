@@ -1059,13 +1059,20 @@ Item {
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         drag.target: parent
                         onPressed: (mouse) => {
+                            // Middle click is the close shortcut, handled in
+                            // onClicked; it must not start a drag.
+                            if (mouse.button !== Qt.LeftButton)
+                                return;
                             window.snapshotPreview(false)
                             WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace.id)
+                            const press = dragArea.mapToItem(null, mouse.x, mouse.y)
                             CrossMonitorDrag.begin(window.windowData?.address,
                                 window.windowData?.workspace.id,
                                 root.monitor?.name ?? "",
                                 window.width, window.height,
-                                window.freezeUrl)
+                                window.freezeUrl,
+                                root.monitorOriginX + press.x,
+                                root.monitorOriginY + press.y)
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window
@@ -1085,6 +1092,11 @@ Item {
                                 root.monitorOriginY + p.y);
                         }
                         onReleased: {
+                            // Only a press that actually started a drag gets here:
+                            // otherwise a middle click, which returns early above,
+                            // would still run the whole commit path.
+                            if (!window.pressed)
+                                return;
                             // A DropArea only fires for the surface the pointer is over, so a
                             // drop on another monitor never reaches the local state above.
                             // Resolve it from the global registry and prefer it when it points
