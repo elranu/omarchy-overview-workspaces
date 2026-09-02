@@ -55,13 +55,19 @@ Singleton {
     // moved or vanished cannot leave a stale target behind for long.
     property var targets: ({})
 
-    function begin(address, workspaceId, monitorName, w, h, preview) {
+    function begin(address, workspaceId, monitorName, w, h, preview, px, py) {
         root.windowAddress = String(address ?? "");
         root.sourceWorkspaceId = workspaceId ?? -1;
         root.sourceMonitorName = String(monitorName ?? "");
         root.sourceWidth = w ?? 0;
         root.sourceHeight = h ?? 0;
         root.previewUrl = String(preview ?? "");
+        // Seed the pointer from the press. Going active with the previous drag's
+        // coordinates still in place would resolve hoveredTarget against a stale
+        // position for one frame -- long enough to flash the highlight on the
+        // wrong card, or the proxy at the destination's top-left corner.
+        root.pointerX = px ?? 0;
+        root.pointerY = py ?? 0;
         root.targets = ({});
         root.active = true;
     }
