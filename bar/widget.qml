@@ -36,6 +36,9 @@ BarWidget {
     function applySettings() {
         Local.GlobalStates.overviewSortMode = setting("sortMode", "legacy") === "legacy"
             ? "legacy" : "system";
+        // The bar widget is the only place that always runs at shell startup;
+        // SettingsPanel only syncs once the panel is instantiated.
+        Local.GlobalStates.overviewPerMonitor = setting("perMonitor", true) !== false;
     }
     function open() { if (settingsPanelLoader.item) settingsPanelLoader.item.open(); }
     function close() { if (settingsPanelLoader.item) settingsPanelLoader.item.close(); }

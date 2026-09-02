@@ -286,7 +286,12 @@ Scope {
                         event.accepted = true;
                         return;
                     }
-                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                    // Search mode owns Tab (it moves the result selection), so this
+                    // workspace-cycling branch has to stand down while it is on --
+                    // it returns unconditionally and would otherwise shadow the
+                    // search handler further down.
+                    if (!GlobalStates.overviewSearchMode
+                        && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab)) {
                         const backward = (event.key === Qt.Key_Backtab) || ((event.modifiers & Qt.ShiftModifier) !== 0);
                         if (OverviewSwitchingController.grabbed) {
                             overviewScope.queueGrabbedCycle(backward ? -1 : 1);
@@ -300,8 +305,7 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
-                    // ── Search mode keyboard handling (DISABLED: search UI removed) ──
-                    /*
+                    // ── Search mode keyboard handling ──
                     if (GlobalStates.overviewSearchMode) {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             overviewSearch.activateSelection();
@@ -358,7 +362,6 @@ Scope {
                         event.accepted = true;
                         return;
                     }
-                    */
                     // Arrow keys navigate workspaces in workspace mode
                     if (!GlobalStates.overviewSearchMode) {
                         overviewScope.handleOverviewNavigationKey(event);

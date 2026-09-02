@@ -26,6 +26,19 @@ Singleton {
     function overviewModel() {
         if (OverviewSwitchingController.grabbed)
             return switchingModeModel();
+        // The keyboard must walk exactly the cards on screen. Without this, in
+        // per-monitor mode the arrow keys step onto workspaces belonging to another
+        // monitor that this overlay does not draw.
+        if (GlobalStates.overviewPerMonitor) {
+            const anchor = GlobalStates.overviewAnchorMonitorName
+                || Hyprland.focusedMonitor?.name
+                || "";
+            if (anchor.length > 0) {
+                const scoped = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(anchor, true, {}, false);
+                if (scoped.length > 0)
+                    return scoped;
+            }
+        }
         return ServiceManager.workspace.overviewWorkspaceEntriesGroupedByMonitor();
     }
 

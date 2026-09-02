@@ -37,7 +37,24 @@ Item {
         void _rev;
         if (OverviewSwitchingController.grabbed)
             return WorkspaceNavigation.switchingModeModel() ?? [];
-        return root.filteredOverviewEntries(ServiceManager.workspace.overviewWorkspaceEntries ?? []);
+        return root.filteredOverviewEntries(root.scopedOverviewEntries());
+    }
+
+    // In per-monitor mode each overlay asks for its own screen's entries instead
+    // of the global list. Scoping here rather than in the renderer leaves the
+    // grid, height and aspect maths untouched: monitorGroups is derived from this
+    // list, so it collapses to a single group on its own.
+    function scopedOverviewEntries() {
+        const all = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
+        if (!GlobalStates.overviewPerMonitor)
+            return all;
+        const name = root.monitor?.name ?? "";
+        if (name.length === 0)
+            return all;
+        const own = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(name, true, {}, false) ?? [];
+        // If Hyprland has not reported this monitor yet, showing everything beats
+        // leaving the screen blank.
+        return own.length > 0 ? own : all;
     }
     readonly property var overviewEntryIds: (root.overviewEntries ?? []).map(entry => entry.id)
     readonly property var searchMatchWorkspaceIds: {
@@ -756,17 +773,17 @@ Item {
                         onPressed: {
                             if (GlobalStates.overviewDraggingTargetWorkspace === -1) {
                                 if (workspace.isTrailingEmpty) {
-                                    GlobalStates.overviewOpen = false;
                                     if (workspace.monitorName.length > 0)
                                         Hyprland.dispatch(`hl.dsp.focus({monitor="${workspace.monitorName}"})`);
                                     Hyprland.dispatch(`hl.dsp.focus({ workspace = ${workspace.workspaceValue} })`);
                                     if (workspace.monitorName.length > 0)
                                         Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${workspace.workspaceValue}", monitor = "${workspace.monitorName}" })`);
+                                    GlobalStates.overviewOpen = false;
                                 } else {
                                     if (ServiceManager.workspace.workspaceHasVisibleWindows(workspace.workspaceValue))
                                         GlobalStates.promoteWorkspaceMru(workspace.workspaceValue);
-                                    GlobalStates.overviewOpen = false;
                                     root.dispatchFocusWorkspace(workspace.workspaceValue);
+                                    GlobalStates.overviewOpen = false;
                                 }
                             }
                         }
@@ -961,8 +978,14 @@ Item {
                             if (!window.windowData) return;
 
                             if (event.button === Qt.LeftButton) {
-                                GlobalStates.overviewOpen = false;
+                                // Dispatch before dismissing. Closing the layer
+                                // surface first hands focus back to whatever was
+                                // active, and that restore races the focus we are
+                                // about to ask for -- when it wins, the click
+                                // appears to do nothing and the previous window
+                                // stays. OverviewSearch already ordered it this way.
                                 WorkspaceNavigation.focusWindow(window.windowData);
+                                GlobalStates.overviewOpen = false;
                                 event.accepted = true;
                             } else if (event.button === Qt.MiddleButton) {
                                 Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
