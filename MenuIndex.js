@@ -238,8 +238,11 @@ function searchScore(items, entry, query) {
 // guards. The difference goes unnoticed because this runs in the background and
 // the answers are cached.
 // Wraps a value so bash sees it literally, however the menu spells its ids.
+// The explicit null check keeps this file on the same ES5 subset as the rest of
+// it -- no nullish coalescing, matching its 46 `var` declarations.
 function shellQuote(value) {
-    return "'" + String(value ?? "").replace(/'/g, "'\\''") + "'";
+    var text = (value === null || value === undefined) ? "" : String(value);
+    return "'" + text.replace(/'/g, "'\\''") + "'";
 }
 
 function guardScript(items) {
