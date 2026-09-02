@@ -237,6 +237,11 @@ function searchScore(items, entry, query) {
 // against 2.22s for the optimised batch, with identical results across all 144
 // guards. The difference goes unnoticed because this runs in the background and
 // the answers are cached.
+// Wraps a value so bash sees it literally, however the menu spells its ids.
+function shellQuote(value) {
+    return "'" + String(value ?? "").replace(/'/g, "'\\''") + "'";
+}
+
 function guardScript(items) {
     var script = "";
     var ids = Object.keys(items || {});
@@ -245,8 +250,19 @@ function guardScript(items) {
         var entry = items[ids[i]];
         if (!entry || !entry.when)
             continue;
-        script += "if { " + entry.when + "; } >/dev/null 2>&1; then echo "
-            + ids[i] + ":w:1; else echo " + ids[i] + ":w:0; fi\n";
+        // The reply is parsed by splitting on the last two colons, so an id
+        // carrying a colon or a newline could not be read back. Skipping it
+        // leaves that row's guard unanswered, which shows the row -- better than
+        // corrupting the reply for every other row in the batch.
+        if (/[\n\r:]/.test(ids[i]))
+            continue;
+        // printf with a quoted payload rather than a bare echo: an id containing
+        // a glob character would otherwise be expanded against the working
+        // directory, emitting one line per matching file and desynchronising the
+        // whole reply.
+        script += "if { " + entry.when + "; } >/dev/null 2>&1; then printf '%s\\n' "
+            + shellQuote(ids[i] + ":w:1") + "; else printf '%s\\n' "
+            + shellQuote(ids[i] + ":w:0") + "; fi\n";
     }
     return script;
 }
