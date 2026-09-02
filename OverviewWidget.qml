@@ -1102,7 +1102,7 @@ Item {
                             window.holdCurrentPosition()
                             window.Drag.active = false
                             window.restorePositionBinding()
-                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing)) {
+                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing, useCross ? crossTarget.monitorName : "")) {
                                 window.releaseHeldPosition()
                                 return
                             }
