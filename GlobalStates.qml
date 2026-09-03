@@ -23,6 +23,10 @@ Singleton {
     // The plugin's optimized visual ordering is the default. The persisted
     // setting can still switch to the native Omarchy order explicitly.
     property string overviewSortMode: "legacy"
+    // When true, h/j/k/l keep navigating workspaces and search opens on "/" --
+    // the vim idiom. When false any printable character opens search, which is
+    // quicker but takes those keys away from navigation.
+    property bool overviewVimKeys: true
     // Each overlay draws only its own monitor's workspaces. Persisted to the bar
     // widget entry in shell.json, the same way overviewSortMode is.
     property bool overviewPerMonitor: true

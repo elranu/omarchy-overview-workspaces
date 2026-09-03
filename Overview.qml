@@ -347,20 +347,28 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
-                    // In workspace mode, any printable character enters search mode
-                    if (!GlobalStates.overviewSearchMode
-                        && event.text.length > 0
-                        && !(event.modifiers & Qt.ControlModifier)
-                        && !(event.modifiers & Qt.AltModifier)
-                        && !(event.modifiers & Qt.MetaModifier)
-                        && event.key !== Qt.Key_Backspace
-                        && event.key !== Qt.Key_Delete
-                        && event.key !== Qt.Key_Tab
-                        && event.key !== Qt.Key_Space) {
-                        overviewScope.overviewFilterQuery = event.text;
-                        GlobalStates.overviewSearchMode = true;
-                        event.accepted = true;
-                        return;
+                    // Entering search mode. With vim keys on, only "/" does it,
+                    // which leaves every letter -- h/j/k/l included -- free to
+                    // navigate; with them off the first character typed both opens
+                    // search and becomes the query.
+                    if (!GlobalStates.overviewSearchMode) {
+                        const plainKey = event.text.length > 0
+                            && !(event.modifiers & Qt.ControlModifier)
+                            && !(event.modifiers & Qt.AltModifier)
+                            && !(event.modifiers & Qt.MetaModifier)
+                            && event.key !== Qt.Key_Backspace
+                            && event.key !== Qt.Key_Delete
+                            && event.key !== Qt.Key_Tab
+                            && event.key !== Qt.Key_Space;
+                        const vim = GlobalStates.overviewVimKeys;
+                        if (vim ? (plainKey && event.key === Qt.Key_Slash) : plainKey) {
+                            // "/" is the trigger, not the first character of the
+                            // query, so it must not land in the text.
+                            overviewScope.overviewFilterQuery = vim ? "" : event.text;
+                            GlobalStates.overviewSearchMode = true;
+                            event.accepted = true;
+                            return;
+                        }
                     }
                     // Arrow keys navigate workspaces in workspace mode
                     if (!GlobalStates.overviewSearchMode) {
