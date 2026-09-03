@@ -10,7 +10,6 @@
 // *navigate* the menu is intentionally left out: providers, app rows, alias
 // routes and the `checked` marker.
 
-.pragma library
 
 // ── JSONC parsing ──────────────────────────────────────────────────────────
 
@@ -268,4 +267,55 @@ function guardScript(items) {
             + shellQuote(ids[i] + ":w:0") + "; fi\n";
     }
     return script;
+}
+
+// Reads back what guardScript() emitted: one "<id>:<tag>:<0|1>" line per guard.
+// Split from the right, because an id may contain dots and the tag never does.
+// Only the "w" (when) tag is of interest; "c" (checked) drives the menu's tick.
+function parseGuardReply(text) {
+    var results = {};
+    var lines = String(text || "").split("\n");
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line)
+            continue;
+        var colon = line.lastIndexOf(":");
+        if (colon < 0)
+            continue;
+        var value = line.substring(colon + 1) === "1";
+        var rest = line.substring(0, colon);
+        var tagAt = rest.lastIndexOf(":");
+        if (tagAt < 0)
+            continue;
+        if (rest.substring(tagAt + 1) === "w")
+            results[rest.substring(0, tagAt)] = value;
+    }
+    return results;
+}
+
+// Importable from QML as a plain JS library and from Node for the test suite.
+// Same shape Omarchy's own MenuModel.js uses; `module` is undefined under QML,
+// so this block is simply skipped there.
+if (typeof module !== "undefined") {
+    module.exports = {
+        stripJsonc: stripJsonc,
+        normalizeAliases: normalizeAliases,
+        normalizeItem: normalizeItem,
+        parseMenuJsonc: parseMenuJsonc,
+        mergeMenuSources: mergeMenuSources,
+        item: item,
+        depthFor: depthFor,
+        pathFor: pathFor,
+        parentPathFor: parentPathFor,
+        searchableToken: searchableToken,
+        leafIdFor: leafIdFor,
+        nameSearchText: nameSearchText,
+        termInSearchWords: termInSearchWords,
+        matchesQuery: matchesQuery,
+        searchScore: searchScore,
+        shellQuote: shellQuote,
+        guardScript: guardScript,
+        parseGuardReply: parseGuardReply
+    };
 }

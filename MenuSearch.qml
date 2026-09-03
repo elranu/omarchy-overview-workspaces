@@ -133,8 +133,8 @@ Singleton {
         onFileChanged: reload()
     }
 
-    // Script output format: "<id>:<tag>:<0|1>" per line. Only the "w" (when) tag
-    // matters here; "c" (checked) drives the menu's ✓ marker.
+    // The reply is read back by MenuIndex.parseGuardReply, which lives there with
+    // guardScript so the two halves of the protocol stay together and testable.
     Process {
         id: guardProc
         property string collected: ""
@@ -155,24 +155,7 @@ Singleton {
                     Qt.callLater(() => root.evaluateGuards());
                 return;
             }
-            const next = ({});
-            const lines = guardProc.collected.split("\n");
-            for (let i = 0; i < lines.length; ++i) {
-                const line = lines[i].trim();
-                if (!line)
-                    continue;
-                const colon = line.lastIndexOf(":");
-                if (colon < 0)
-                    continue;
-                const value = line.substring(colon + 1) === "1";
-                const rest = line.substring(0, colon);
-                const tagAt = rest.lastIndexOf(":");
-                if (tagAt < 0)
-                    continue;
-                if (rest.substring(tagAt + 1) === "w")
-                    next[rest.substring(0, tagAt)] = value;
-            }
-            root.whenResults = next;
+            root.whenResults = MenuIndex.parseGuardReply(guardProc.collected);
             if (root.guardsPending)
                 Qt.callLater(() => root.evaluateGuards());
         }
