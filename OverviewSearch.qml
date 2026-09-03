@@ -163,6 +163,44 @@ Item {
     // Query bar: shows what is being typed, above the workspace cards. It appears
     // as soon as search mode starts, even before any text, so it is clear the
     // keyboard no longer navigates workspaces.
+    // Where the query bar will appear. With vim keys on, search is otherwise
+    // invisible: nothing on screen says the key exists.
+    Rectangle {
+        id: searchHint
+        anchors {
+            top: parent.top
+            topMargin: 24
+            horizontalCenter: parent.horizontalCenter
+        }
+        width: hintRow.implicitWidth + 24
+        height: 30
+        visible: root.searchMode === false
+            && GlobalStates.overviewVimKeys
+        radius: 6
+        color: TuiStyle.surfaceSubtle
+        border.width: 1
+        border.color: TuiStyle.inactiveBorder
+        opacity: 0.75
+
+        RowLayout {
+            id: hintRow
+            anchors.centerIn: parent
+            spacing: 7
+
+            NerdIcon {
+                symbol: "search"
+                iconSize: 13
+                color: TuiStyle.dim
+            }
+
+            StyledText {
+                text: "Press  /  to search"
+                color: TuiStyle.dim
+                font.pixelSize: 12
+            }
+        }
+    }
+
     Rectangle {
         id: queryBar
         property bool cursorOn: true
@@ -201,7 +239,9 @@ Item {
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.hasQuery ? root.query : "Type to search    >  shell command"
+                text: root.hasQuery
+                    ? root.query
+                    : "Search apps, windows and the menu    >  shell command"
                 color: root.hasQuery ? TuiStyle.fg : TuiStyle.dim
                 font.pixelSize: 15
                 elide: Text.ElideLeft

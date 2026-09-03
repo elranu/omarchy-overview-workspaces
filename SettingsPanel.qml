@@ -47,10 +47,16 @@ Panel {
         root.persistSetting("perMonitor", enabled);
     }
 
+    function persistVimKeys(enabled) {
+        GlobalStates.overviewVimKeys = enabled;
+        root.persistSetting("vimKeys", enabled);
+    }
+
     function syncSettings() {
         const mode = root.setting("sortMode", "legacy") === "legacy" ? "legacy" : "system";
         GlobalStates.overviewSortMode = mode;
         GlobalStates.overviewPerMonitor = root.setting("perMonitor", true) !== false;
+        GlobalStates.overviewVimKeys = root.setting("vimKeys", true) !== false;
     }
 
     Component.onCompleted: {
@@ -58,6 +64,77 @@ Panel {
     }
 
     onSettingsChanged: root.syncSettings()
+
+    // Both settings below are a labelled row with an ON/OFF pill, so the shape
+    // lives here once instead of being spelled out twice.
+    component ToggleRow: Rectangle {
+        id: row
+        required property string title
+        required property string detail
+        required property bool checked
+        signal toggled()
+
+        height: rowText.implicitHeight + Style.space(16)
+        color: row.checked
+            ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.18)
+            : Util.alpha(Color.popups.text, 0.06)
+        border.width: 1
+        border.color: row.checked ? Color.accent : Color.popups.border
+
+        Column {
+            id: rowText
+            anchors.left: parent.left
+            anchors.right: pill.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Style.space(8)
+            anchors.rightMargin: Style.space(8)
+            spacing: Style.space(2)
+
+            Text {
+                text: row.title
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: root.panelForeground
+                font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                font.pixelSize: Style.font.body
+                font.bold: true
+            }
+            Text {
+                text: row.detail
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: root.panelMuted
+                font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                font.pixelSize: Style.font.caption
+            }
+        }
+
+        Rectangle {
+            id: pill
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: Style.space(8)
+            width: pillLabel.implicitWidth + Style.space(16)
+            height: pillLabel.implicitHeight + Style.space(6)
+            radius: height / 2
+            color: row.checked ? Color.accent : Util.alpha(Color.popups.text, 0.14)
+
+            Text {
+                id: pillLabel
+                anchors.centerIn: parent
+                text: row.checked ? "ON" : "OFF"
+                color: row.checked ? Color.popups.background : root.panelMuted
+                font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: true
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: row.toggled()
+        }
+    }
 
     KeyboardPanel {
         id: panel
@@ -167,6 +244,32 @@ Panel {
                         Rectangle {
                             width: menuColumn.width
                             height: 1
+                            color: Util.alpha(Color.popups.text, 0.12)
+                        }
+
+                        Text {
+                            text: "Overview search"
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            color: root.panelForeground
+                            font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                            font.pixelSize: Style.font.title
+                            font.bold: true
+                        }
+
+                        ToggleRow {
+                            width: menuColumn.width
+                            title: "Keep h/j/k/l for navigation"
+                            detail: GlobalStates.overviewVimKeys
+                                ? "Press / to open search."
+                                : "Any letter opens search."
+                            checked: GlobalStates.overviewVimKeys
+                            onToggled: root.persistVimKeys(!GlobalStates.overviewVimKeys)
+                        }
+
+                        Rectangle {
+                            width: menuColumn.width
+                            height: 1
                             visible: root.multiMonitor
                             color: Util.alpha(Color.popups.text, 0.12)
                         }
@@ -182,76 +285,15 @@ Panel {
                             font.bold: true
                         }
 
-                        Rectangle {
-                            id: perMonitorRow
-                            visible: root.multiMonitor
+                        ToggleRow {
                             width: menuColumn.width
-                            height: perMonitorColumn.implicitHeight + Style.space(16)
-                            color: GlobalStates.overviewPerMonitor
-                                ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.18)
-                                : Util.alpha(Color.popups.text, 0.06)
-                            border.width: 1
-                            border.color: GlobalStates.overviewPerMonitor ? Color.accent : Color.popups.border
-
-                            Column {
-                                id: perMonitorColumn
-                                anchors.left: parent.left
-                                anchors.right: statePill.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: Style.space(8)
-                                anchors.rightMargin: Style.space(8)
-                                spacing: Style.space(2)
-
-                                Text {
-                                    text: "Show only this monitor's workspaces"
-                                    width: parent.width
-                                    wrapMode: Text.WordWrap
-                                    color: root.panelForeground
-                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
-                                    font.pixelSize: Style.font.body
-                                    font.bold: true
-                                }
-                                Text {
-                                    text: GlobalStates.overviewPerMonitor
-                                        ? "Each screen draws its own workspaces."
-                                        : "Every screen draws all workspaces, including the other monitors'."
-                                    width: parent.width
-                                    wrapMode: Text.WordWrap
-                                    color: root.panelMuted
-                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
-                                    font.pixelSize: Style.font.caption
-                                }
-                            }
-
-                            Rectangle {
-                                id: statePill
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.rightMargin: Style.space(8)
-                                width: pillLabel.implicitWidth + Style.space(16)
-                                height: pillLabel.implicitHeight + Style.space(6)
-                                radius: height / 2
-                                color: GlobalStates.overviewPerMonitor
-                                    ? Color.accent
-                                    : Util.alpha(Color.popups.text, 0.14)
-
-                                Text {
-                                    id: pillLabel
-                                    anchors.centerIn: parent
-                                    text: GlobalStates.overviewPerMonitor ? "ON" : "OFF"
-                                    color: GlobalStates.overviewPerMonitor
-                                        ? Color.popups.background
-                                        : root.panelMuted
-                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
-                                    font.pixelSize: Style.font.caption
-                                    font.bold: true
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: root.persistPerMonitor(!GlobalStates.overviewPerMonitor)
-                            }
+                            visible: root.multiMonitor
+                            title: "Show only this monitor's workspaces"
+                            detail: GlobalStates.overviewPerMonitor
+                                ? "Each screen draws its own workspaces."
+                                : "Every screen draws all workspaces, including the other monitors'."
+                            checked: GlobalStates.overviewPerMonitor
+                            onToggled: root.persistPerMonitor(!GlobalStates.overviewPerMonitor)
                         }
                     }
                 }

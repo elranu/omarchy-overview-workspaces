@@ -39,6 +39,7 @@ BarWidget {
         // The bar widget is the only place that always runs at shell startup;
         // SettingsPanel only syncs once the panel is instantiated.
         Local.GlobalStates.overviewPerMonitor = setting("perMonitor", true) !== false;
+        Local.GlobalStates.overviewVimKeys = setting("vimKeys", true) !== false;
     }
     function open() { if (settingsPanelLoader.item) settingsPanelLoader.item.open(); }
     function close() { if (settingsPanelLoader.item) settingsPanelLoader.item.close(); }
