@@ -122,6 +122,17 @@ Singleton {
         printErrors: false
         onLoaded: { root.defaultItems = MenuIndex.parseMenuJsonc(text()); root.rebuild(); }
         onFileChanged: reload()
+        // Without this the menu section would simply come up empty and give no
+        // reason why. The likely cause is OMARCHY_PATH not reaching the shell
+        // process, which matters on any install that is not under /usr/share.
+        onLoadFailed: {
+            console.warn("hancore.overview-workspaces: no menu definition at "
+                + root.defaultPath + " (OMARCHY_PATH="
+                + (Quickshell.env("OMARCHY_PATH") || "unset")
+                + ") -- command menu results will be unavailable");
+            root.defaultItems = [];
+            root.rebuild();
+        }
     }
 
     FileView {
