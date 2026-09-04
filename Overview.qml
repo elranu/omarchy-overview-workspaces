@@ -430,19 +430,14 @@ Scope {
                 Loader {
                     id: overviewLoader
                     anchors.fill: parent
-                    // Keep the Loader always active so the OverviewWidget tree
-                    // (and all its ScreencopyViews) stays instantiated and holds
-                    // the latest captured frame. This eliminates the
-                    // "wallpaper flash → thumbnail pop" on open: the
-                    // ScreencopyView only starts capturing once it exists, so
-                    // gating the Loader on overviewOpen means the first frame
-                    // isn't ready until a frame or two after open. With live:false
-                    // (performance mode) holding the views costs one snapshot
-                    // each; with live:true Qt only renders visible items, so a
-                    // hidden tree is effectively free. asynchronous:true lets the
-                    // scrim paint while the tree builds the very first time.
+                    // Do not keep the complete OverviewWidget tree alive while
+                    // hidden. It contains every workspace/window model and
+                    // ScreencopyView; after suspend/resume that hidden tree can
+                    // keep the shell's main thread busy and can lose its capture
+                    // context. Recreate it when Overview opens instead.
                     asynchronous: true
-                    active: Config?.options.overview.enable ?? true
+                    active: (Config?.options.overview.enable ?? true)
+                        && GlobalStates.overviewOpen
                     sourceComponent: OverviewWidget {
                         screen: panelWindow.screen
                         searchQuery: ""

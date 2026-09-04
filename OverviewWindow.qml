@@ -190,11 +190,17 @@ Item { // Window
     }
 
     function snapshotPreview() {
-        if (!root.anyPreviewContent)
+        // The overview tree stays instantiated while hidden so it can retain
+        // thumbnails, but hidden items do not have a valid capture context
+        // during shell startup/resume.  Calling grabToImage() there can return
+        // an itemgrabber:// URL which QtQuick.Image cannot load.
+        if (!root.captureActive || !root.visible || !root.anyPreviewContent
+            || !previewHost.window)
             return;
         previewHost.grabToImage(result => {
-            if (result?.url)
-                root.freezeUrl = result.url;
+            const url = String(result?.url ?? "");
+            if (root.captureActive && root.visible && url.startsWith("file:"))
+                root.freezeUrl = url;
         });
     }
 
@@ -297,7 +303,7 @@ Item { // Window
         id: freezeImage
         anchors.fill: parent
         visible: root.showingFreeze
-        source: root.freezeUrl
+        source: root.showingFreeze ? root.freezeUrl : ""
         fillMode: Image.Stretch
         asynchronous: false
         cache: false
