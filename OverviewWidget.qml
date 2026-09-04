@@ -1116,7 +1116,17 @@ Item {
                             window.holdCurrentPosition()
                             window.Drag.active = false
                             window.restorePositionBinding()
-                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing, useCross ? crossTarget.monitorName : "")) {
+                            // The hint is always supplied, not only for cross-monitor
+                            // drops. A local drop lands on a card drawn by this
+                            // overlay, so this monitor is the answer -- and without
+                            // it the lookup falls back to overviewModel(), which is
+                            // scoped to the anchor monitor. On a non-anchor screen
+                            // that resolves the trailing card, whose id repeats
+                            // across monitors, against the wrong one.
+                            const dropMonitor = useCross
+                                ? crossTarget.monitorName
+                                : (root.monitor?.name ?? "")
+                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing, dropMonitor)) {
                                 window.releaseHeldPosition()
                                 return
                             }

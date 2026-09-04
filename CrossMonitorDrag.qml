@@ -43,10 +43,10 @@ Singleton {
     // the window itself rather than a stand-in.
     //
     // The grab result is held, not just its url. grabToImage returns an in-memory
-    // image:// url that stays valid only while the result object is alive, so
-    // dropping the object would leave the proxy pointing at nothing. Holding it
-    // is also what makes this independent of freezeUrl, which only accepts file:
-    // urls and is therefore empty for an in-memory grab.
+    // url that stays valid only while the result object is alive, so dropping the
+    // object would leave the proxy pointing at nothing. Holding it is also what
+    // makes this independent of freezeUrl, which only accepts file: urls and is
+    // therefore empty for an in-memory grab.
     //
     // One grab per drag, and released on end(): the source monitor is already
     // capturing this window live, and a second continuous capture would be paid
