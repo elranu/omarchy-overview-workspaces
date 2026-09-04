@@ -185,7 +185,7 @@ Singleton {
         }
     }
 
-    function commitWindowDrag(windowAddress, currentWorkspaceId, targetWorkspace, targetIsTrailing) {
+    function commitWindowDrag(windowAddress, currentWorkspaceId, targetWorkspace, targetIsTrailing, targetMonitorHint) {
         root.resetOverviewDragState();
         if (!windowAddress || targetWorkspace === -1 || targetWorkspace === currentWorkspaceId)
             return false;
@@ -194,9 +194,22 @@ Singleton {
             .filter(win => win.mapped && !win.hidden);
         const sourceIsEmptyAfterMove = sourceVisibleWindows.length <= 1;
 
-        const model = root.overviewModel();
-        const entry = model.find(item => item.id === targetWorkspace);
-        const targetMonitorName = entry?.monitorName ?? "";
+        // A workspace id does not identify a card on its own. Each monitor gets its
+        // own trailing "new workspace" card, and each is numbered by asking for
+        // the first free id independently, so with two monitors both cards come
+        // back as the same number. Worse, overviewModel() is scoped to one
+        // monitor, so a card on another screen is not in it at all. Looking up by
+        // id therefore matched the local card and sent the window back to the
+        // monitor it came from -- which is why dropping on the other screen's new
+        // workspace never worked.
+        //
+        // The caller already knows which monitor the pointer resolved to, so it
+        // passes that in. The lookup stays only for same-monitor drags.
+        const hinted = String(targetMonitorHint ?? "");
+        const entry = hinted.length > 0
+            ? null
+            : root.overviewModel().find(item => item.id === targetWorkspace);
+        const targetMonitorName = hinted.length > 0 ? hinted : (entry?.monitorName ?? "");
 
         GlobalStates.setPendingWindowWorkspace(windowAddress, targetWorkspace);
 
