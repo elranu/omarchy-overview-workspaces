@@ -904,7 +904,7 @@ Item {
                     DropArea {
                         anchors.fill: parent
                         onEntered: {
-                            WorkspaceNavigation.setDragTarget(workspace.workspaceValue, workspace.isTrailingEmpty)
+                            WorkspaceNavigation.setDragTarget(workspace.workspaceValue, workspace.isTrailingEmpty, workspace.monitorName)
                             if (GlobalStates.overviewDraggingFromWorkspace == GlobalStates.overviewDraggingTargetWorkspace) return;
                             hoveredWhileDragging = true
                         }
@@ -1111,21 +1111,23 @@ Item {
                             const targetIsTrailing = useCross
                                 ? crossTarget.isTrailing
                                 : GlobalStates.overviewDraggingTargetIsTrailing
+                            // The monitor the target workspace belongs to, not the one
+                            // drawing it: with per-monitor preview off every overlay
+                            // draws every workspace, so a card for another screen's
+                            // workspace sits on this one, and naming this overlay's
+                            // monitor would drag that workspace over here instead.
+                            //
+                            // Read here, alongside the other two, because clearing
+                            // Drag.active below makes the DropArea fire onExited,
+                            // which wipes this state before the commit runs.
+                            const dropMonitor = useCross
+                                ? crossTarget.monitorName
+                                : GlobalStates.overviewDraggingTargetMonitor
                             CrossMonitorDrag.end()
                             window.pressed = false
                             window.holdCurrentPosition()
                             window.Drag.active = false
                             window.restorePositionBinding()
-                            // The hint is always supplied, not only for cross-monitor
-                            // drops. A local drop lands on a card drawn by this
-                            // overlay, so this monitor is the answer -- and without
-                            // it the lookup falls back to overviewModel(), which is
-                            // scoped to the anchor monitor. On a non-anchor screen
-                            // that resolves the trailing card, whose id repeats
-                            // across monitors, against the wrong one.
-                            const dropMonitor = useCross
-                                ? crossTarget.monitorName
-                                : (root.monitor?.name ?? "")
                             if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace?.id, targetWorkspace, targetIsTrailing, dropMonitor)) {
                                 window.releaseHeldPosition()
                                 return

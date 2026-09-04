@@ -167,21 +167,24 @@ Singleton {
         GlobalStates.overviewDraggingFromWorkspace = -1;
         GlobalStates.overviewDraggingTargetWorkspace = -1;
         GlobalStates.overviewDraggingTargetIsTrailing = false;
+        GlobalStates.overviewDraggingTargetMonitor = "";
     }
 
     function beginWindowDrag(fromWorkspaceId) {
         GlobalStates.overviewDraggingFromWorkspace = fromWorkspaceId ?? -1;
     }
 
-    function setDragTarget(workspaceId, isTrailing) {
+    function setDragTarget(workspaceId, isTrailing, monitorName) {
         GlobalStates.overviewDraggingTargetWorkspace = workspaceId;
         GlobalStates.overviewDraggingTargetIsTrailing = isTrailing;
+        GlobalStates.overviewDraggingTargetMonitor = String(monitorName ?? "");
     }
 
     function clearDragTarget(workspaceId) {
         if (GlobalStates.overviewDraggingTargetWorkspace === workspaceId) {
             GlobalStates.overviewDraggingTargetWorkspace = -1;
             GlobalStates.overviewDraggingTargetIsTrailing = false;
+            GlobalStates.overviewDraggingTargetMonitor = "";
         }
     }
 
