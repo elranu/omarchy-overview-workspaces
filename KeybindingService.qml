@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 
 Item {
     id: root
@@ -127,6 +128,25 @@ Item {
     Connections {
         target: root.shell
         function onShellConfigChanged() {
+            Qt.callLater(root.applyBindings);
+        }
+    }
+
+    // These bindings live only in Hyprland's runtime, so anything that makes it
+    // re-read its config wipes them: a theme change, `omarchy refresh`, editing a
+    // .lua file, or a monitor hotplug (hypr-monitor-arrange reloads to re-detect
+    // displays). Until now nothing re-registered them, so Super fell back to
+    // Omarchy's own menu until the shell was restarted by hand.
+    Connections {
+        target: Hyprland
+
+        function onRawEvent(event) {
+            if (event?.name !== "configreloaded")
+                return;
+            // The reload already dropped the bindings, but appliedMode still says
+            // they are installed and applyBindings() would return early. Clearing
+            // it is what makes the re-registration actually run.
+            root.appliedMode = "";
             Qt.callLater(root.applyBindings);
         }
     }

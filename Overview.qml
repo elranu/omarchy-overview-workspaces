@@ -286,7 +286,12 @@ Scope {
                         event.accepted = true;
                         return;
                     }
-                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                    // Search mode owns Tab (it moves the result selection), so this
+                    // workspace-cycling branch has to stand down while it is on --
+                    // it returns unconditionally and would otherwise shadow the
+                    // search handler further down.
+                    if (!GlobalStates.overviewSearchMode
+                        && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab)) {
                         const backward = (event.key === Qt.Key_Backtab) || ((event.modifiers & Qt.ShiftModifier) !== 0);
                         if (OverviewSwitchingController.grabbed) {
                             overviewScope.queueGrabbedCycle(backward ? -1 : 1);
@@ -300,8 +305,7 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
-                    // ── Search mode keyboard handling (DISABLED: search UI removed) ──
-                    /*
+                    // ── Search mode keyboard handling ──
                     if (GlobalStates.overviewSearchMode) {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             overviewSearch.activateSelection();
@@ -343,22 +347,29 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
-                    // In workspace mode, any printable character enters search mode
-                    if (!GlobalStates.overviewSearchMode
-                        && event.text.length > 0
-                        && !(event.modifiers & Qt.ControlModifier)
-                        && !(event.modifiers & Qt.AltModifier)
-                        && !(event.modifiers & Qt.MetaModifier)
-                        && event.key !== Qt.Key_Backspace
-                        && event.key !== Qt.Key_Delete
-                        && event.key !== Qt.Key_Tab
-                        && event.key !== Qt.Key_Space) {
-                        overviewScope.overviewFilterQuery = event.text;
-                        GlobalStates.overviewSearchMode = true;
-                        event.accepted = true;
-                        return;
+                    // Entering search mode. With vim keys on, only "/" does it,
+                    // which leaves every letter -- h/j/k/l included -- free to
+                    // navigate; with them off the first character typed both opens
+                    // search and becomes the query.
+                    if (!GlobalStates.overviewSearchMode) {
+                        const plainKey = event.text.length > 0
+                            && !(event.modifiers & Qt.ControlModifier)
+                            && !(event.modifiers & Qt.AltModifier)
+                            && !(event.modifiers & Qt.MetaModifier)
+                            && event.key !== Qt.Key_Backspace
+                            && event.key !== Qt.Key_Delete
+                            && event.key !== Qt.Key_Tab
+                            && event.key !== Qt.Key_Space;
+                        const vim = GlobalStates.overviewVimKeys;
+                        if (vim ? (plainKey && event.key === Qt.Key_Slash) : plainKey) {
+                            // "/" is the trigger, not the first character of the
+                            // query, so it must not land in the text.
+                            overviewScope.overviewFilterQuery = vim ? "" : event.text;
+                            GlobalStates.overviewSearchMode = true;
+                            event.accepted = true;
+                            return;
+                        }
                     }
-                    */
                     // Arrow keys navigate workspaces in workspace mode
                     if (!GlobalStates.overviewSearchMode) {
                         overviewScope.handleOverviewNavigationKey(event);

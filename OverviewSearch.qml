@@ -15,6 +15,7 @@ Item {
     property int selectedIndex: 0
     property int maxAppResults: 5
     property int maxWindowResults: 7
+    property int maxMenuResults: 6
 
     readonly property string normalizedQuery: query.trim()
     readonly property bool commandMode: normalizedQuery.startsWith(">")
@@ -26,8 +27,12 @@ Item {
     readonly property var windowResults: hasQuery && !commandMode
         ? root.filterWindows(normalizedQuery).slice(0, maxWindowResults)
         : []
+    readonly property var menuResults: hasQuery && !commandMode
+        ? MenuSearch.query(normalizedQuery, maxMenuResults)
+        : []
     readonly property int commandResultCount: commandMode && commandText.length > 0 ? 1 : 0
-    readonly property int totalResults: commandResultCount + appResults.length + windowResults.length
+    readonly property int totalResults: commandResultCount + appResults.length
+        + windowResults.length + menuResults.length
     readonly property int popupWidth: Math.min(760, Math.max(520, width - 80))
 
     signal searchRequested()
@@ -102,6 +107,13 @@ Item {
         GlobalStates.overviewOpen = false;
     }
 
+    function runMenuAction(row) {
+        if (!row)
+            return;
+        MenuSearch.runAction(row.action);
+        GlobalStates.overviewOpen = false;
+    }
+
     function activateSelection() {
         if (commandResultCount > 0) {
             executeCommand();
@@ -112,8 +124,13 @@ Item {
             return;
         }
         const windowIndex = selectedIndex - appResults.length;
-        if (windowIndex >= 0 && windowIndex < windowResults.length)
+        if (windowIndex >= 0 && windowIndex < windowResults.length) {
             focusWindow(windowResults[windowIndex]);
+            return;
+        }
+        const menuIndex = windowIndex - windowResults.length;
+        if (menuIndex >= 0 && menuIndex < menuResults.length)
+            runMenuAction(menuResults[menuIndex]);
     }
 
     function windowTitle(win) {
@@ -143,11 +160,115 @@ Item {
     onQueryChanged: selectedIndex = 0
 
 
+    // Query bar: shows what is being typed, above the workspace cards. It appears
+    // as soon as search mode starts, even before any text, so it is clear the
+    // keyboard no longer navigates workspaces.
+    // Where the query bar will appear. With vim keys on, search is otherwise
+    // invisible: nothing on screen says the key exists.
     Rectangle {
-        id: resultsPopup
+        id: searchHint
         anchors {
             top: parent.top
             topMargin: 24
+            horizontalCenter: parent.horizontalCenter
+        }
+        width: hintRow.implicitWidth + 24
+        height: 30
+        visible: root.searchMode === false
+            && GlobalStates.overviewVimKeys
+        radius: 6
+        color: TuiStyle.surfaceSubtle
+        border.width: 1
+        border.color: TuiStyle.inactiveBorder
+        opacity: 0.75
+
+        RowLayout {
+            id: hintRow
+            anchors.centerIn: parent
+            spacing: 7
+
+            NerdIcon {
+                symbol: "search"
+                iconSize: 13
+                color: TuiStyle.dim
+            }
+
+            StyledText {
+                text: "Press  /  to search"
+                color: TuiStyle.dim
+                font.pixelSize: 12
+            }
+        }
+    }
+
+    Rectangle {
+        id: queryBar
+        property bool cursorOn: true
+
+        anchors {
+            top: parent.top
+            topMargin: 24
+            horizontalCenter: parent.horizontalCenter
+        }
+        width: root.popupWidth
+        height: 46
+        visible: root.searchMode
+        radius: 8
+        color: TuiStyle.bg
+        border.width: 1
+        border.color: root.commandMode ? TuiStyle.accent : TuiStyle.menuBorder
+
+        Timer {
+            running: queryBar.visible
+            interval: 530
+            repeat: true
+            onTriggered: queryBar.cursorOn = !queryBar.cursorOn
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            spacing: 10
+
+            NerdIcon {
+                symbol: root.commandMode ? "terminal" : "search"
+                iconSize: 18
+                color: root.commandMode ? TuiStyle.accent : TuiStyle.dim
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: root.hasQuery
+                    ? root.query
+                    : "Search apps, windows and the menu    >  shell command"
+                color: root.hasQuery ? TuiStyle.fg : TuiStyle.dim
+                font.pixelSize: 15
+                elide: Text.ElideLeft
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 2
+                Layout.preferredHeight: 19
+                color: TuiStyle.accent
+                opacity: queryBar.cursorOn ? 1 : 0
+                visible: root.hasQuery
+            }
+
+            StyledText {
+                visible: root.totalResults > 0
+                text: `${root.selectedIndex + 1}/${root.totalResults}`
+                color: TuiStyle.dim
+                font.pixelSize: 11
+            }
+        }
+    }
+
+    Rectangle {
+        id: resultsPopup
+        anchors {
+            top: queryBar.bottom
+            topMargin: 8
             horizontalCenter: parent.horizontalCenter
         }
         width: root.popupWidth
@@ -242,13 +363,37 @@ Item {
                     }
                 }
 
+                SearchSectionHeader {
+                    Layout.fillWidth: true
+                    visible: root.menuResults.length > 0
+                    label: "Command Menu"
+                    count: root.menuResults.length
+                }
+
+                Repeater {
+                    model: root.menuResults
+
+                    SearchResultRow {
+                        required property var modelData
+                        required property int index
+                        Layout.fillWidth: true
+                        resultIndex: root.appResults.length + root.windowResults.length + index
+                        title: modelData?.label || ""
+                        subtitle: modelData?.description || modelData?.action || ""
+                        meta: modelData?.path || "Omarchy menu"
+                        symbol: "menu"
+                        selected: root.selectedIndex === resultIndex
+                        onActivated: root.runMenuAction(modelData)
+                    }
+                }
+
                 StyledText {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 48
                     visible: root.totalResults === 0
                     text: root.commandMode
                         ? "Type a command after >"
-                        : "No matching applications or windows"
+                        : "No matching applications, windows or menu actions"
                     color: TuiStyle.dim
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
