@@ -1070,9 +1070,11 @@ Item {
                                 window.windowData?.workspace.id,
                                 root.monitor?.name ?? "",
                                 window.width, window.height,
-                                window.freezeUrl,
                                 root.monitorOriginX + press.x,
                                 root.monitorOriginY + press.y)
+                            // Asynchronous, so the proxy shows its icon-and-title
+                            // fallback for the frame or two until this lands.
+                            window.grabPreview(result => CrossMonitorDrag.setPreview(result))
                             window.pressed = true
                             window.Drag.active = true
                             window.Drag.source = window

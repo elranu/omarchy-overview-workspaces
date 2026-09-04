@@ -39,12 +39,22 @@ Singleton {
     property real sourceWidth: 0
     property real sourceHeight: 0
 
-    // Snapshot of the dragged window's contents. OverviewWindow already keeps one
-    // (grabToImage into freezeUrl, refreshed every 400ms) for its freeze frame,
-    // and both overlays share a QML engine, so the destination can display the
-    // real window instead of a stand-in -- without a second screen capture of a
-    // window already being recorded on the source monitor.
-    property string previewUrl: ""
+    // Snapshot of the dragged window's contents, so the destination monitor shows
+    // the window itself rather than a stand-in.
+    //
+    // The grab result is held, not just its url. grabToImage returns an in-memory
+    // image:// url that stays valid only while the result object is alive, so
+    // dropping the object would leave the proxy pointing at nothing. Holding it
+    // is also what makes this independent of freezeUrl, which only accepts file:
+    // urls and is therefore empty for an in-memory grab.
+    //
+    // One grab per drag, and released on end(): the source monitor is already
+    // capturing this window live, and a second continuous capture would be paid
+    // for on the GPU for no benefit.
+    property var previewGrab: null
+    readonly property string previewUrl: root.previewGrab
+        ? String(root.previewGrab.url ?? "")
+        : ""
 
     // Pointer in global coordinates, updated while the drag runs.
     property real pointerX: 0
@@ -55,13 +65,13 @@ Singleton {
     // moved or vanished cannot leave a stale target behind for long.
     property var targets: ({})
 
-    function begin(address, workspaceId, monitorName, w, h, preview, px, py) {
+    function begin(address, workspaceId, monitorName, w, h, px, py) {
         root.windowAddress = String(address ?? "");
         root.sourceWorkspaceId = workspaceId ?? -1;
         root.sourceMonitorName = String(monitorName ?? "");
         root.sourceWidth = w ?? 0;
         root.sourceHeight = h ?? 0;
-        root.previewUrl = String(preview ?? "");
+        root.previewGrab = null;
         // Seed the pointer from the press. Going active with the previous drag's
         // coordinates still in place would resolve hoveredTarget against a stale
         // position for one frame -- long enough to flash the highlight on the
@@ -111,8 +121,14 @@ Singleton {
         return null;
     }
 
+    function setPreview(grabResult) {
+        root.previewGrab = grabResult ?? null;
+    }
+
     function end() {
         root.active = false;
+        // Let the grabbed image go; nothing displays it once the drag is over.
+        root.previewGrab = null;
         root.windowAddress = "";
         root.sourceWorkspaceId = -1;
         root.sourceMonitorName = "";
