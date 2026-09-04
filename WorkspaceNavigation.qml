@@ -194,22 +194,15 @@ Singleton {
             .filter(win => win.mapped && !win.hidden);
         const sourceIsEmptyAfterMove = sourceVisibleWindows.length <= 1;
 
-        // A workspace id does not identify a card on its own. Each monitor gets its
-        // own trailing "new workspace" card, and each is numbered by asking for
-        // the first free id independently, so with two monitors both cards come
-        // back as the same number. Worse, overviewModel() is scoped to one
-        // monitor, so a card on another screen is not in it at all. Looking up by
-        // id therefore matched the local card and sent the window back to the
-        // monitor it came from -- which is why dropping on the other screen's new
-        // workspace never worked.
+        // A workspace id does not identify a card on its own. Each monitor appends
+        // its own trailing "new workspace" card, numbered by asking for the first
+        // free id independently, so with two monitors both cards come back as the
+        // same number. Nothing here could work the monitor out from the id alone:
+        // overviewModel() is scoped to the anchor monitor, so it holds neither the
+        // other screen's cards nor, on a non-anchor screen, the local ones.
         //
-        // The caller already knows which monitor the pointer resolved to, so it
-        // passes that in. The lookup stays only for same-monitor drags.
-        const hinted = String(targetMonitorHint ?? "");
-        const entry = hinted.length > 0
-            ? null
-            : root.overviewModel().find(item => item.id === targetWorkspace);
-        const targetMonitorName = hinted.length > 0 ? hinted : (entry?.monitorName ?? "");
+        // The caller resolved which monitor the pointer was over, so it says so.
+        const targetMonitorName = String(targetMonitorHint ?? "");
 
         GlobalStates.setPendingWindowWorkspace(windowAddress, targetWorkspace);
 

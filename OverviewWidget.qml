@@ -1064,10 +1064,10 @@ Item {
                             if (mouse.button !== Qt.LeftButton)
                                 return;
                             window.snapshotPreview(false)
-                            WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace.id)
+                            WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace?.id)
                             const press = dragArea.mapToItem(null, mouse.x, mouse.y)
                             CrossMonitorDrag.begin(window.windowData?.address,
-                                window.windowData?.workspace.id,
+                                window.windowData?.workspace?.id,
                                 root.monitor?.name ?? "",
                                 window.width, window.height,
                                 root.monitorOriginX + press.x,
@@ -1126,7 +1126,7 @@ Item {
                             const dropMonitor = useCross
                                 ? crossTarget.monitorName
                                 : (root.monitor?.name ?? "")
-                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace.id, targetWorkspace, targetIsTrailing, dropMonitor)) {
+                            if (WorkspaceNavigation.commitWindowDrag(window.windowData?.address, window.windowData?.workspace?.id, targetWorkspace, targetIsTrailing, dropMonitor)) {
                                 window.releaseHeldPosition()
                                 return
                             }
