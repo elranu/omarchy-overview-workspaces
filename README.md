@@ -35,6 +35,9 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
 - Keyboard navigation with arrows, H/J/K/L, Tab, Enter, Space, and Escape.
 - MRU workspace switching with Win+Tab and Win+Shift+Tab.
+- Search for applications, open windows, and Omarchy menu actions from Overview.
+- Per-monitor workspace previews, configurable from the gear panel.
+- Re-registers its runtime bindings after a Hyprland configuration reload.
 - Omarchy theme colors and configured icon font.
 - No generic fallback icon is drawn over a window thumbnail when an app has no icon.
 
@@ -66,6 +69,21 @@ Open the gear button in the top bar to choose a mode.
 - Native Win+number behavior is restored while Overview and Win+Tab remain available.
 
 Changing the mode updates the top bar, Overview, and keyboard behavior together.
+
+### Search
+
+Open Overview with the standalone Win/Super key, then press `/` to enter search.
+Type an application name, window title, or Omarchy menu action and press Enter
+to launch or focus the selected result. Use the arrow keys or Tab to move the
+selection, and Escape to leave search.
+
+H/J/K/L remain workspace navigation keys by default. To restore the older
+behavior where any printable character starts search, turn off **Keep h/j/k/l
+for navigation** in the gear panel. Prefix a query with `>` to run it as a
+terminal command.
+
+The search index reads Omarchy's menu through `$OMARCHY_PATH`, so it does not
+assume `/usr/share/omarchy` and can be used on NixOS installations.
 
 ### Keyboard integration and cleanup
 
@@ -100,6 +118,7 @@ omarchy plugin validate .
 qmllint -I /usr/share/omarchy/shell \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
+node --test tests/menu-index.test.js
 ```
 
 ---
@@ -120,6 +139,9 @@ Overview Workspaces 是一个用于 Omarchy Quattro 的体验增强插件。它�
 - 支持鼠标选择、窗口聚焦、窗口拖拽和多显示器布局。
 - 支持方向键、H/J/K/L、Tab、Enter、Space、Escape。
 - 使用 Win+Tab 和 Win+Shift+Tab 按 MRU 顺序切换工作区。
+- 可以在 Overview 中搜索应用、已打开的窗口和 Omarchy 菜单操作。
+- 支持按显示器隔离工作区预览，并可在齿轮面板中配置。
+- Hyprland 配置 reload 后会自动重新注册运行时快捷键。
 - 使用 Omarchy 主题颜色和配置的图标字体。
 - 应用没有图标时，不会在窗口缩略图上覆盖通用图标。
 
@@ -151,6 +173,19 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 - Win+数字恢复系统行为，同时 Overview 和 Win+Tab 仍然可用。
 
 切换模式会同时更新顶部栏、Overview 和快捷键行为。
+
+### 搜索
+
+先单独按 Win/Super 打开 Overview，然后按 `/` 进入搜索。输入应用名称、
+窗口标题或 Omarchy 菜单操作，按 Enter 启动应用、聚焦窗口或执行操作。
+可以使用方向键或 Tab 移动选择，按 Escape 退出搜索。
+
+默认情况下 H/J/K/L 仍然用于工作区导航。如果希望恢复“输入任意字符就
+进入搜索”的旧行为，可以在齿轮面板中关闭 **Keep h/j/k/l for navigation**。
+在查询前加 `>` 可以把内容作为终端命令执行。
+
+菜单索引通过 `$OMARCHY_PATH` 读取 Omarchy 菜单，不假定路径必须是
+`/usr/share/omarchy`，因此可以适配 NixOS 安装。
 
 ### 快捷键与清理
 
@@ -185,6 +220,7 @@ omarchy plugin validate .
 qmllint -I /usr/share/omarchy/shell \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
+node --test tests/menu-index.test.js
 ```
 
 ---
@@ -205,6 +241,9 @@ Overview Workspaces は Omarchy Quattro の操作体験を強化するプラグ�
 - マウス選択、ウィンドウのフォーカス、ドラッグ、マルチモニターに対応。
 - 矢印キー、H/J/K/L、Tab、Enter、Space、Escape に対応。
 - Win+Tab と Win+Shift+Tab による MRU 切り替え。
+- Overview からアプリ、開いているウィンドウ、Omarchy メニュー操作を検索。
+- モニターごとのワークスペースプレビューに対応し、歯車パネルで設定可能。
+- Hyprland の設定 reload 後に実行時ショートカットを自動再登録。
 - Omarchy のテーマカラーと設定済みアイコンフォントを使用。
 - アプリアイコンがない場合、サムネイル上に汎用アイコンを表示しない。
 
@@ -236,6 +275,21 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 - Win+数字はシステム標準に戻し、Overview と Win+Tab は引き続き利用できます。
 
 モード変更時、トップバー、Overview、ショートカットが同時に更新されます。
+
+### 検索
+
+Win/Super キー単独で Overview を開き、`/` を押すと検索モードになります。
+アプリ名、ウィンドウタイトル、Omarchy メニュー操作を入力して Enter を
+押すと、選択した項目を起動またはフォーカスできます。矢印キーまたは Tab
+で選択を移動し、Escape で検索を終了します。
+
+デフォルトでは H/J/K/L はワークスペース移動に使用します。以前のように
+任意の文字で検索を開始する場合は、歯車パネルの **Keep h/j/k/l for
+navigation** をオフにします。クエリの先頭に `>` を付けるとターミナル
+コマンドとして実行できます。
+
+メニューインデックスは `$OMARCHY_PATH` から Omarchy のメニューを読み込む
+ため、`/usr/share/omarchy` 固定ではなく NixOS のインストールにも対応します。
 
 ### ショートカットと後始末
 
@@ -270,4 +324,5 @@ omarchy plugin validate .
 qmllint -I /usr/share/omarchy/shell \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
+node --test tests/menu-index.test.js
 ```
