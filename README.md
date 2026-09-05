@@ -1,5 +1,12 @@
 # Overview Workspaces
 
+## 0.1.8
+
+- Added a guarded force-kill mode to Overview: press `Ctrl+Shift+X`, then click
+  a window to terminate only that client by address.
+- The mode hides the themed system cursor and shows the JetBrainsMono Nerd Font
+  close glyph `󰅖` next to the pointer. `Escape` or right-click cancels safely.
+
 ## 0.1.7
 
 - System-native mode keeps Omarchy's Win+1…0 workspace binds instead of
@@ -45,6 +52,9 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 - Empty workspaces remain visible when using native ordering.
 - A New workspace card always stays at the end of each monitor's list.
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
+- Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor becomes a
+  crosshair, and clicking a window kills only that client. Press `Escape` or
+  right-click to cancel without killing anything.
 - Keyboard navigation with arrows, H/J/K/L, Tab, Enter, Space, and Escape.
 - MRU workspace switching with Win+Tab and Win+Shift+Tab.
 - Search for applications, open windows, and Omarchy menu actions from Overview.

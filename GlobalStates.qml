@@ -18,6 +18,9 @@ Singleton {
     // Monitor name the brightness OSD should pin to (empty = focused screen).
     property string osdBrightnessScreen: ""
     property bool overviewOpen: false
+    // Armed by Ctrl+Shift+X inside overview. In this mode a left click kills
+    // the selected client instead of focusing or dragging it.
+    property bool overviewKillMode: false
     property string overviewAnchorMonitorName: ""
     property bool overviewSearchMode: false
     // The plugin's optimized visual ordering is the default. The persisted

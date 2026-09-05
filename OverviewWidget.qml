@@ -14,6 +14,8 @@ Item {
     id: root
     required property var screen
     property real wheelAccum: 0
+    property real pointerX: width / 2
+    property real pointerY: height / 2
     readonly property string configuredWallpaperPath: FileUtils.expandHomePath(Config.options.background.wallpaperPath)
     // The overview process's keepalive window owns the preloader. readyUrl
     // changes only after the requested revision has decoded.
@@ -697,7 +699,13 @@ Item {
                     MouseArea {
                         id: workspaceArea
                         anchors.fill: parent
+                        cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
+                        onPositionChanged: function(mouse) {
+                            const point = mapToItem(root, mouse.x, mouse.y);
+                            root.pointerX = point.x;
+                            root.pointerY = point.y;
+                        }
                         acceptedButtons: Qt.LeftButton
                         onEntered: {
                             if (!GlobalStates.overviewDraggingTargetWorkspace || GlobalStates.overviewDraggingTargetWorkspace === -1) {
@@ -861,7 +869,13 @@ Item {
                     MouseArea {
                         id: dragArea
                         anchors.fill: parent
+                        cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
+                        onPositionChanged: function(mouse) {
+                            const point = mapToItem(root, mouse.x, mouse.y);
+                            root.pointerX = point.x;
+                            root.pointerY = point.y;
+                        }
                         onEntered: {
                             window.hovered = true
                             root.hoveredWindowData = window.windowData
@@ -884,8 +898,12 @@ Item {
                                 root.hoveredWorkspaceEntry = null
                         }
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        drag.target: parent
+                        drag.target: GlobalStates.overviewKillMode ? null : parent
                         onPressed: (mouse) => {
+                            if (GlobalStates.overviewKillMode) {
+                                window.pressed = true;
+                                return;
+                            }
                             window.snapshotPreview()
                             WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace.id)
                             window.pressed = true
@@ -895,6 +913,10 @@ Item {
                             window.Drag.hotSpot.y = mouse.y
                         }
                         onReleased: {
+                            if (GlobalStates.overviewKillMode) {
+                                window.pressed = false;
+                                return;
+                            }
                             const targetWorkspace = GlobalStates.overviewDraggingTargetWorkspace
                             const targetIsTrailing = GlobalStates.overviewDraggingTargetIsTrailing
                             window.pressed = false
@@ -915,6 +937,14 @@ Item {
                         onClicked: (event) => {
                             if (!window.windowData) return;
 
+                            if (GlobalStates.overviewKillMode && event.button === Qt.LeftButton) {
+                                Hyprland.dispatch(`hl.dsp.window.kill({window = "address:${window.windowData.address}"})`)
+                                GlobalStates.overviewKillMode = false;
+                                GlobalStates.overviewOpen = false;
+                                event.accepted = true;
+                                return;
+                            }
+
                             if (event.button === Qt.LeftButton) {
                                 // Dispatch before dismissing. Closing the layer
                                 // surface first hands focus back to whatever was
@@ -932,6 +962,18 @@ Item {
                         }
                     }
                 }
+            }
+
+            Text {
+                visible: GlobalStates.overviewKillMode
+                z: root.windowDraggingZ + 1
+                x: root.pointerX + 8
+                y: root.pointerY + 8
+                text: "󰅖"
+                color: TuiStyle.accent
+                font.family: "JetBrainsMono Nerd Font Mono"
+                font.pixelSize: 28
+                renderType: Text.NativeRendering
             }
 
             Repeater { // Workspace entry borders (on top of windows)
