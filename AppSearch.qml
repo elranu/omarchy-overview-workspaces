@@ -121,15 +121,29 @@ Singleton {
 
         const values = DesktopEntries.applications.values || [];
         const scored = [];
+        const seen = ({});
         for (let i = 0; i < values.length; ++i) {
             const entry = values[i];
             if (!entry || entry.noDisplay)
                 continue;
             if (root.hiddenIds[root.normalizeDesktopId(entry.id)])
                 continue;
+            // The same desktop file can be exposed once from the user's
+            // applications directory and once from the system directory,
+            // often with ids such as Discord and omarchy-Discord. Keep one
+            // result when the visible application metadata is identical.
             const position = root.entryHaystack(entry).indexOf(needle);
             if (position < 0)
                 continue;
+            const duplicateKey = [
+                entry.name || "",
+                entry.genericName || "",
+                entry.comment || "",
+                entry.icon || ""
+            ].join("\u001f").toLowerCase();
+            if (seen[duplicateKey])
+                continue;
+            seen[duplicateKey] = true;
             const name = String(entry.name || "");
             const nameIndex = name.toLowerCase().indexOf(needle);
             const score = nameIndex === 0 ? 0 : (nameIndex > 0 ? 1 : 2 + position);
