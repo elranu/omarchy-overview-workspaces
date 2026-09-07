@@ -989,6 +989,15 @@ Item {
                             const point = mapToItem(root, mouse.x, mouse.y);
                             root.pointerX = point.x;
                             root.pointerY = point.y;
+                            // The pointer grab keeps delivering motion after the
+                            // cursor leaves this surface, with coordinates outside
+                            // our own bounds. Publishing it in global coordinates is
+                            // what makes a drop on another monitor resolvable.
+                            if (window.pressed) {
+                                const global = dragArea.mapToItem(null, mouse.x, mouse.y);
+                                CrossMonitorDrag.updatePointer(root.monitorOriginX + global.x,
+                                    root.monitorOriginY + global.y);
+                            }
                         }
                         onEntered: {
                             window.hovered = true
@@ -1040,18 +1049,6 @@ Item {
                             window.Drag.source = window
                             window.Drag.hotSpot.x = mouse.x
                             window.Drag.hotSpot.y = mouse.y
-                        }
-
-                        // The pointer grab keeps delivering motion after the cursor
-                        // leaves this surface, with coordinates outside our bounds.
-                        // Publishing it globally is what makes a drop on another
-                        // monitor resolvable at all.
-                        onPositionChanged: (mouse) => {
-                            if (!window.pressed)
-                                return;
-                            const p = dragArea.mapToItem(null, mouse.x, mouse.y);
-                            CrossMonitorDrag.updatePointer(root.monitorOriginX + p.x,
-                                root.monitorOriginY + p.y);
                         }
 
                         onReleased: {
