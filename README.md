@@ -136,10 +136,12 @@ assume `/usr/share/omarchy` and can be used on NixOS installations.
 
 The enabled plugin service registers standalone Win, Win+Tab, Win+Shift+Tab, optimized Win+number slots, and Super-interrupt guards for normal application shortcuts.
 
-When the plugin is disabled or removed, the service removes only the runtime
-bindings it owns and restores native workspace navigation and Super+mouse
-move/resize. It never runs `hyprctl reload` or writes runtime binds into the
-user's Hyprland configuration.
+When the plugin is disabled or removed, the service removes the fixed shortcut
+chords it manages and restores Omarchy's default workspace navigation and
+Super+mouse move/resize. Hyprland's runtime unbind API has no plugin-owner
+identity, so a custom user mapping on the same chord cannot be preserved by
+this cleanup. The service never runs `hyprctl reload` or writes runtime binds
+into the user's Hyprland configuration.
 
 ### Manual summon and diagnostics
 
@@ -252,9 +254,10 @@ omarchy restart shell
 
 插件启用后，service 会自动注册单独 Win、Win+Tab、Win+Shift+Tab、优化模式的 Win+数字，以及防止普通应用快捷键误触发 Overview 的拦截绑定。
 
-插件禁用或卸载时，service 只删除自己拥有的运行时绑定，并恢复工作区及
-Super+鼠标移动/缩放绑定。不会执行 `hyprctl reload`，也不会把运行时绑定
-写入用户的 Hyprland 配置文件。
+插件禁用或卸载时，service会删除自己管理的固定快捷键组合，并恢复Omarchy默认的
+工作区及Super+鼠标移动/缩放绑定。Hyprland的运行时unbind API没有“插件所有者”
+标识，因此如果用户在相同组合键上设有自定义映射，清理时无法保留该映射。
+service不会执行`hyprctl reload`，也不会把运行时绑定写入用户的Hyprland配置文件。
 
 ### 手动启动和诊断
 
@@ -370,10 +373,11 @@ navigation** をオフにします。クエリの先頭に `>` を付けると�
 
 有効化中、service が Win 単独、Win+Tab、Win+Shift+Tab、最適化モードの Win+数字、および通常のアプリショートカットとの競合を防ぐ割り込みバインドを自動登録します。
 
-プラグインを無効化または削除すると、service は自分が所有する実行時
-バインドだけを削除し、置き換えていたワークスペース用キーと Super+マウスの
-移動/リサイズを復元します。`hyprctl reload` は実行せず、実行時バインドを
-設定ファイルへ書き込みません。
+プラグインを無効化または削除すると、serviceは管理対象の固定ショートカットを
+削除し、Omarchy標準のワークスペース操作とSuper+マウスの移動/リサイズを
+復元します。Hyprlandの実行時unbind APIにはプラグイン所有者の識別子がないため、
+同じキーに設定されたユーザー独自の割り当ては保持できません。serviceは
+`hyprctl reload`を実行せず、実行時バインドを設定ファイルへ書き込みません。
 
 ### 手動起動と診断
 
