@@ -108,6 +108,14 @@ test('restores native number bindings only for an owned legacy to system handoff
     assert.equal(requiresNativeRestore('system', 'legacy'), false);
 });
 
+test('README documents the keepLoaded update activation step', () => {
+    const manifest = require('../manifest.json');
+    const readme = fs.readFileSync(require.resolve('../README.md'), 'utf8');
+    assert.equal(manifest.keepLoaded, true);
+    assert.match(readme, /omarchy restart shell/);
+    assert.match(readme, /rescan alone does not replace that service instance/);
+});
+
 test('manifest and settings panel report the same plugin version', () => {
     const version = require('../manifest.json').version;
     const panel = fs.readFileSync(require.resolve('../SettingsPanel.qml'), 'utf8');

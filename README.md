@@ -10,6 +10,8 @@
   destroyed, so no Overview event observer remains behind.
 - Restore native Win+number bindings when changing from optimized ordering to
   system ordering, preventing stale Overview slots after a later disable.
+- Document the required Shell restart after updating an existing enabled copy;
+  Omarchy intentionally preserves `keepLoaded` services during plugin rescans.
 
 ## 0.1.8
 
@@ -81,6 +83,16 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 ```
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
+
+After updating an existing enabled installation, restart Omarchy Shell once so
+the new keybinding service code replaces the preserved `keepLoaded` instance:
+
+```sh
+omarchy restart shell
+```
+
+A plugin rescan alone does not replace that service instance. Do not use a
+Hyprland reload as a substitute.
 
 Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Older hosts that injected the full shell configuration also retain the legacy duplicate-layout cleanup.
 
@@ -191,6 +203,15 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 启用后插件会自动注册 Hyprland 快捷键，用户不需要手动修改 `~/.config/hypr/bindings.lua`。
 
+如果是更新已经启用的旧版本，请在更新后重启一次 Omarchy Shell，让新的快捷键
+service替换Omarchy在插件rescan期间保留的`keepLoaded`旧实例：
+
+```sh
+omarchy restart shell
+```
+
+只执行插件rescan不会替换这个service实例；不要用Hyprland reload代替。
+
 启用时会自动替换原生工作区指示器，禁用时由 Omarchy 恢复原生组件。仍注入完整 Shell 配置的旧版 Omarchy 会继续执行旧布局的重复项清理。
 
 ### 排序模式
@@ -296,6 +317,16 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 ```
 
 有効化後、Hyprland のショートカットは自動登録されます。`~/.config/hypr/bindings.lua` を手動編集する必要はありません。
+
+有効化済みの旧バージョンを更新した場合は、更新後にOmarchy Shellを一度再起動し、
+プラグインのrescan中も保持される古い`keepLoaded`サービスを新しいコードに置き換えてください。
+
+```sh
+omarchy restart shell
+```
+
+プラグインのrescanだけではこのサービスは置き換わりません。代わりにHyprlandの
+reloadを使用しないでください。
 
 有効化すると標準のワークスペース表示を自動的に置き換え、無効化すると Omarchy が標準表示を復元します。完全な Shell 設定を注入する旧版 Omarchy では、従来どおり既存レイアウトの重複も整理します。
 
