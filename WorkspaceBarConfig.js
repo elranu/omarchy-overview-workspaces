@@ -31,8 +31,8 @@ function isPlainObject(value) {
 function shellBarConfig(shell) {
     if (!shell || (typeof shell !== "object" && typeof shell !== "function"))
         return null;
-    if ("barConfig" in shell && isPlainObject(shell.barConfig))
-        return shell.barConfig;
+    if ("barConfig" in shell)
+        return isPlainObject(shell.barConfig) ? shell.barConfig : null;
     if ("shellConfig" in shell && isPlainObject(shell.shellConfig)
             && isPlainObject(shell.shellConfig.bar))
         return shell.shellConfig.bar;

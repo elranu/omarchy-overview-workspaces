@@ -76,6 +76,10 @@ test('prefers scoped barConfig and rejects malformed or missing layouts', () => 
     assert.equal(configuredMode(shell), 'system');
     assert.equal(configuredMode(null), '');
     assert.equal(configuredMode({ barConfig: [] }), '');
+    assert.equal(configuredMode({
+        barConfig: [],
+        shellConfig: { bar: { layout: { left: [overview] } } }
+    }), '');
     assert.equal(configuredMode({ barConfig: { layout: [] } }), '');
     assert.equal(configuredMode({ barConfig: { layout: { left: [null, 7, {}] } } }), '');
     assert.equal(legacyShellConfig({ barConfig: {} }), null);
