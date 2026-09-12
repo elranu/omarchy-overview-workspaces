@@ -114,7 +114,7 @@ test('README documents the keepLoaded update activation step', () => {
     assert.equal(manifest.keepLoaded, true);
     assert.match(readme, /omarchy restart shell/);
     assert.match(readme, /rescan alone does not replace that service instance/);
-    assert.match(readme, /runtime unbind API has no plugin-owner identity/);
+    assert.match(readme, /runtime unbind API has no plugin-owner\s+identity/);
 });
 
 test('manifest and settings panel report the same plugin version', () => {
