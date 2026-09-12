@@ -92,6 +92,17 @@ Item {
             : commands.join("; ");
     }
 
+    function transitionScript(previousMode, nextMode) {
+        const commands = [root.bindingScript(nextMode === "legacy")];
+        // Only a live legacy -> system transition proves that these number
+        // bindings belong to this service. Restore the native mappings during
+        // that handoff; a fresh system-mode start must leave user mappings alone.
+        if (WorkspaceBarConfig.requiresNativeWorkspaceNumberRestore(previousMode, nextMode))
+            for (const command of root.nativeWorkspaceNumberCommands())
+                commands.push(command);
+        return commands.join("; ");
+    }
+
     function applyBindings() {
         if (!root.shell)
             return;
@@ -107,7 +118,7 @@ Item {
         if (root.appliedMode === mode)
             return;
         root.restoring = false;
-        Quickshell.execDetached(["hyprctl", "eval", root.bindingScript(mode === "legacy")]);
+        Quickshell.execDetached(["hyprctl", "eval", root.transitionScript(root.appliedMode, mode)]);
         root.appliedMode = mode;
     }
 

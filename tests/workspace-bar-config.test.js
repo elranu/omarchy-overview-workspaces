@@ -7,6 +7,7 @@ vm.runInContext(fs.readFileSync(require.resolve('../WorkspaceBarConfig.js'), 'ut
 const migrate = context.removeDuplicateNativeWidget;
 const configuredMode = context.configuredOverviewMode;
 const legacyShellConfig = context.legacyShellConfig;
+const requiresNativeRestore = context.requiresNativeWorkspaceNumberRestore;
 const native = 'omarchy.workspaces';
 const overview = 'hancore.overview-workspaces';
 
@@ -91,10 +92,20 @@ test('QML listens to both scoped and legacy config signals without warnings', ()
     assert.match(source, /ignoreUnknownSignals:\s*true/);
     assert.match(source, /function onBarConfigChanged\(\)/);
     assert.match(source, /function onShellConfigChanged\(\)/);
+    assert.match(source, /transitionScript\(root\.appliedMode, mode\)/);
+    assert.match(source, /requiresNativeWorkspaceNumberRestore\(previousMode, nextMode\)/);
     assert.equal((source.match(/hancoreOverviewSuperListener:remove\(\)/g) ?? []).length, 2);
     assert.match(source, /hancoreOverviewSuperListener = nil/);
     assert.match(source, /hancoreOverviewSuperDown = nil/);
     assert.doesNotMatch(source, /hyprctl[^\n]*reload|reload[^\n]*hyprctl/);
+});
+
+test('restores native number bindings only for an owned legacy to system handoff', () => {
+    assert.equal(requiresNativeRestore('legacy', 'system'), true);
+    assert.equal(requiresNativeRestore('', 'system'), false);
+    assert.equal(requiresNativeRestore('system', 'system'), false);
+    assert.equal(requiresNativeRestore('legacy', 'legacy'), false);
+    assert.equal(requiresNativeRestore('system', 'legacy'), false);
 });
 
 test('manifest and settings panel report the same plugin version', () => {

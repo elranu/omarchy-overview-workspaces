@@ -70,3 +70,7 @@ function legacyShellConfig(shell) {
         return null;
     return shell.shellConfig;
 }
+
+function requiresNativeWorkspaceNumberRestore(previousMode, nextMode) {
+    return previousMode === "legacy" && nextMode === "system";
+}

@@ -8,6 +8,8 @@
   full shell configuration.
 - Remove the raw Super-key listener when the plugin service is disabled or
   destroyed, so no Overview event observer remains behind.
+- Restore native Win+number bindings when changing from optimized ordering to
+  system ordering, preventing stale Overview slots after a later disable.
 
 ## 0.1.8
 
