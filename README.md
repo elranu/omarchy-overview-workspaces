@@ -1,5 +1,14 @@
 # Overview Workspaces
 
+## 0.1.9
+
+- Restored automatic Win/Super, Win+Tab, and optimized Win+number bindings on
+  Omarchy 4 by using its capability-scoped `barConfig` API.
+- Kept compatibility with older Omarchy hosts without requesting access to the
+  full shell configuration.
+- Remove the raw Super-key listener when the plugin service is disabled or
+  destroyed, so no Overview event observer remains behind.
+
 ## 0.1.8
 
 - Added a guarded force-kill mode to Overview: press `Ctrl+Shift+X`, then click
@@ -71,7 +80,7 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
 
-Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Existing layouts containing both indicators are cleaned up automatically when the plugin loads.
+Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Older hosts that injected the full shell configuration also retain the legacy duplicate-layout cleanup.
 
 ### Ordering modes
 
@@ -145,7 +154,7 @@ omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```
 
 ---
@@ -180,7 +189,7 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 启用后插件会自动注册 Hyprland 快捷键，用户不需要手动修改 `~/.config/hypr/bindings.lua`。
 
-启用时会自动替换原生工作区指示器，禁用时由 Omarchy 恢复原生组件。旧配置若同时包含两种指示器，插件加载后会自动清理重复项。
+启用时会自动替换原生工作区指示器，禁用时由 Omarchy 恢复原生组件。仍注入完整 Shell 配置的旧版 Omarchy 会继续执行旧布局的重复项清理。
 
 ### 排序模式
 
@@ -251,7 +260,7 @@ omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```
 
 ---
@@ -286,7 +295,7 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 有効化後、Hyprland のショートカットは自動登録されます。`~/.config/hypr/bindings.lua` を手動編集する必要はありません。
 
-有効化すると標準のワークスペース表示を自動的に置き換え、無効化すると Omarchy が標準表示を復元します。既存の設定で両方が表示されている場合も、プラグインの読み込み時に重複を自動的に解消します。
+有効化すると標準のワークスペース表示を自動的に置き換え、無効化すると Omarchy が標準表示を復元します。完全な Shell 設定を注入する旧版 Omarchy では、従来どおり既存レイアウトの重複も整理します。
 
 ### 並び順モード
 
@@ -360,5 +369,5 @@ omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```

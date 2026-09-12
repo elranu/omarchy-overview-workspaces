@@ -5,6 +5,8 @@ const vm = require('node:vm');
 const context = vm.createContext({});
 vm.runInContext(fs.readFileSync(require.resolve('../WorkspaceBarConfig.js'), 'utf8'), context);
 const migrate = context.removeDuplicateNativeWidget;
+const configuredMode = context.configuredOverviewMode;
+const legacyShellConfig = context.legacyShellConfig;
 const native = 'omarchy.workspaces';
 const overview = 'hancore.overview-workspaces';
 
@@ -40,4 +42,59 @@ test('accepts string entries and missing sections', () => {
     assert.equal(migrate(config), true);
     assert.deepEqual(config.bar.layout.left, [overview]);
     assert.equal(migrate(config), false);
+});
+
+test('reads the Omarchy 4 capability-scoped barConfig', () => {
+    assert.equal(configuredMode({ barConfig: { layout: {
+        left: [{ id: overview, sortMode: 'system' }],
+        center: [],
+        right: []
+    } } }), 'system');
+    assert.equal(configuredMode({ barConfig: { layout: {
+        left: [],
+        center: [overview],
+        right: []
+    } } }), 'legacy');
+});
+
+test('falls back to the legacy full-shell configuration', () => {
+    const fullConfig = { bar: { layout: {
+        left: [],
+        center: [],
+        right: [{ id: overview, sortMode: 'legacy' }]
+    } } };
+    const shell = { shellConfig: fullConfig };
+    assert.equal(configuredMode(shell), 'legacy');
+    assert.equal(legacyShellConfig(shell), fullConfig);
+});
+
+test('prefers scoped barConfig and rejects malformed or missing layouts', () => {
+    const shell = {
+        barConfig: { layout: { left: [{ id: overview, sortMode: 'system' }] } },
+        shellConfig: { bar: { layout: { left: [{ id: overview }] } } }
+    };
+    assert.equal(configuredMode(shell), 'system');
+    assert.equal(configuredMode(null), '');
+    assert.equal(configuredMode({ barConfig: [] }), '');
+    assert.equal(configuredMode({ barConfig: { layout: [] } }), '');
+    assert.equal(configuredMode({ barConfig: { layout: { left: [null, 7, {}] } } }), '');
+    assert.equal(legacyShellConfig({ barConfig: {} }), null);
+});
+
+test('QML listens to both scoped and legacy config signals without warnings', () => {
+    const source = fs.readFileSync(require.resolve('../KeybindingService.qml'), 'utf8');
+    assert.match(source, /configuredOverviewMode\(root\.shell\)/);
+    assert.match(source, /ignoreUnknownSignals:\s*true/);
+    assert.match(source, /function onBarConfigChanged\(\)/);
+    assert.match(source, /function onShellConfigChanged\(\)/);
+    assert.equal((source.match(/hancoreOverviewSuperListener:remove\(\)/g) ?? []).length, 2);
+    assert.match(source, /hancoreOverviewSuperListener = nil/);
+    assert.match(source, /hancoreOverviewSuperDown = nil/);
+    assert.doesNotMatch(source, /hyprctl[^\n]*reload|reload[^\n]*hyprctl/);
+});
+
+test('manifest and settings panel report the same plugin version', () => {
+    const version = require('../manifest.json').version;
+    const panel = fs.readFileSync(require.resolve('../SettingsPanel.qml'), 'utf8');
+    assert.match(panel, new RegExp(`pluginVersion:\\s*"${version.replaceAll('.', '\\.')}"`));
 });

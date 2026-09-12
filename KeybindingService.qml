@@ -25,16 +25,19 @@ Item {
     // add a generic SUPER+key observer: it cannot distinguish a standalone
     // Super release from a user shortcut such as Ctrl+Super+V.
     function configuredMode() {
-        const config = root.shell?.shellConfig;
-        const bar = config?.bar;
-        const layout = bar?.layout;
-        for (const section of ["left", "center", "right"]) {
-            for (const entry of layout?.[section] ?? []) {
-                if (entry?.id === "hancore.overview-workspaces")
-                    return entry.sortMode === "system" ? "system" : "legacy";
-            }
+        return WorkspaceBarConfig.configuredOverviewMode(root.shell);
+    }
+
+    function migrateLegacyDuplicateWidget() {
+        const legacyConfig = WorkspaceBarConfig.legacyShellConfig(root.shell);
+        if (!legacyConfig || typeof root.shell.mutateShellConfig !== "function")
+            return;
+        const configCopy = JSON.parse(JSON.stringify(legacyConfig));
+        if (WorkspaceBarConfig.removeDuplicateNativeWidget(configCopy)) {
+            root.shell.mutateShellConfig(function(config) {
+                WorkspaceBarConfig.removeDuplicateNativeWidget(config);
+            });
         }
-        return "";
     }
 
     // Workspace numbers and the overview navigation chords are the only normal
@@ -92,13 +95,7 @@ Item {
     function applyBindings() {
         if (!root.shell)
             return;
-        const configCopy = JSON.parse(JSON.stringify(root.shell.shellConfig ?? {}));
-        if (WorkspaceBarConfig.removeDuplicateNativeWidget(configCopy)
-                && typeof root.shell.mutateShellConfig === "function") {
-            root.shell.mutateShellConfig(function(config) {
-                WorkspaceBarConfig.removeDuplicateNativeWidget(config);
-            });
-        }
+        root.migrateLegacyDuplicateWidget();
         const mode = root.configuredMode();
         if (mode === "") {
             if (root.appliedMode !== "") {
@@ -119,6 +116,8 @@ Item {
             return;
         root.restoring = true;
         const commands = [
+            'if _G.hancoreOverviewSuperListener then _G.hancoreOverviewSuperListener:remove(); _G.hancoreOverviewSuperListener = nil end',
+            '_G.hancoreOverviewSuperDown = nil',
             'hl.unbind("SUPER_L")',
             'hl.unbind("SUPER_R")',
             'hl.unbind("SUPER + SUPER_L")',
@@ -139,6 +138,10 @@ Item {
 
     Connections {
         target: root.shell
+        ignoreUnknownSignals: true
+        function onBarConfigChanged() {
+            Qt.callLater(root.applyBindings);
+        }
         function onShellConfigChanged() {
             Qt.callLater(root.applyBindings);
         }
