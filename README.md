@@ -72,6 +72,8 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 - MRU workspace switching with Win+Tab and Win+Shift+Tab.
 - Search for applications, open windows, and Omarchy menu actions from Overview.
 - Per-monitor workspace previews, configurable from the gear panel.
+- Right-click any part of the top-bar workspace widget to open Overview as a
+  mouse fallback when the keyboard shortcut is unavailable.
 - Re-registers its runtime bindings after a Hyprland configuration reload.
 - Omarchy theme colors and configured icon font.
 - No generic fallback icon is drawn over a window thumbnail when an app has no icon.
@@ -165,6 +167,11 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 
 ### Validation
 
+The complete repeatable validation procedure is documented in
+[`docs/validation.md`](docs/validation.md). It covers automated tests, plugin
+validation, QML checks, Shell IPC, layer checks, mouse fallback behavior,
+stability cycles, and recovery isolation.
+
 ```sh
 omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
@@ -193,6 +200,7 @@ Overview Workspaces 是一个用于 Omarchy Quattro 的体验增强插件。它�
 - 使用 Win+Tab 和 Win+Shift+Tab 按 MRU 顺序切换工作区。
 - 可以在 Overview 中搜索应用、已打开的窗口和 Omarchy 菜单操作。
 - 支持按显示器隔离工作区预览，并可在齿轮面板中配置。
+- 右键点击顶栏工作区区域的任意位置都可以打开 Overview，作为快捷键失效时的鼠标回退入口。
 - Hyprland 配置 reload 后会自动重新注册运行时快捷键。
 - 使用 Omarchy 主题颜色和配置的图标字体。
 - 应用没有图标时，不会在窗口缩略图上覆盖通用图标。
@@ -281,6 +289,10 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 
 ### 验证
 
+每次修改后的完整验收流程见
+[`docs/validation.md`](docs/validation.md)，包括自动测试、插件校验、QML 检查、
+Shell IPC、bar/Overview layer、右键鼠标回退、稳定性循环和卡死隔离恢复流程。
+
 ```sh
 omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
@@ -309,6 +321,7 @@ Overview Workspaces は Omarchy Quattro の操作体験を強化するプラグ�
 - Win+Tab と Win+Shift+Tab による MRU 切り替え。
 - Overview からアプリ、開いているウィンドウ、Omarchy メニュー操作を検索。
 - モニターごとのワークスペースプレビューに対応し、歯車パネルで設定可能。
+- トップバーのワークスペース領域を右クリックすると、キーボードショートカットの代替として Overview を開けます。
 - Hyprland の設定 reload 後に実行時ショートカットを自動再登録。
 - Omarchy のテーマカラーと設定済みアイコンフォントを使用。
 - アプリアイコンがない場合、サムネイル上に汎用アイコンを表示しない。
@@ -400,6 +413,9 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 - `KeybindingService.qml`：ショートカットの登録と後始末。
 
 ### 検証
+
+自動テスト、プラグイン検証、QML、Shell IPC、layer、マウス操作、安定性確認を
+含む完全な手順は [`docs/validation.md`](docs/validation.md) にまとめています。
 
 ```sh
 omarchy plugin validate .
