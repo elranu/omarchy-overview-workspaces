@@ -19,7 +19,7 @@ Item {
     readonly property string configuredWallpaperPath: FileUtils.expandHomePath(Config.options.background.wallpaperPath)
     // The overview process's keepalive window owns the preloader. readyUrl
     // changes only after the requested revision has decoded.
-    readonly property url displayedWallpaperUrl: Wallpaper.readyUrl != ""
+    readonly property url displayedWallpaperUrl: Wallpaper.readyUrl !== ""
         ? Wallpaper.readyUrl
         : Wallpaper.requestedUrl
     readonly property HyprlandMonitor monitor: Hyprland.monitorFor(screen)
