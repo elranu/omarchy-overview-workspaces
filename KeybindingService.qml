@@ -21,6 +21,17 @@ Item {
         onTriggered: root.applyBindings()
     }
 
+    // A runtime binding transaction can produce a configreloaded event on some
+    // Hyprland versions. Ignore that event while our own binding transaction
+    // is settling; otherwise the service can repeatedly apply the same script
+    // and starve the Quickshell event loop. Events arriving after the guard
+    // expires are genuine external reloads and still trigger reinstallation.
+    Timer {
+        id: bindingApplyGuard
+        interval: 750
+        repeat: false
+    }
+
     // The only key expressions installed below belong to this plugin. Never
     // add a generic SUPER+key observer: it cannot distinguish a standalone
     // Super release from a user shortcut such as Ctrl+Super+V.
@@ -118,6 +129,7 @@ Item {
         if (root.appliedMode === mode)
             return;
         root.restoring = false;
+        bindingApplyGuard.restart();
         Quickshell.execDetached(["hyprctl", "eval", root.transitionScript(root.appliedMode, mode)]);
         root.appliedMode = mode;
     }
@@ -163,6 +175,8 @@ Item {
 
         function onRawEvent(event) {
             if (event?.name !== "configreloaded")
+                return;
+            if (bindingApplyGuard.running)
                 return;
             root.appliedMode = "";
             root.restoring = false;

@@ -99,6 +99,12 @@ test('QML listens to both scoped and legacy config signals without warnings', ()
     assert.match(source, /hancoreOverviewSuperDown = nil/);
     assert.doesNotMatch(source, /hyprctl[^\n]*reload|reload[^\n]*hyprctl/);
 });
+test('guards the binding transaction against its own configreloaded event', () => {
+    const source = fs.readFileSync(require.resolve('../KeybindingService.qml'), 'utf8');
+    assert.match(source, /id: bindingApplyGuard/);
+    assert.match(source, /bindingApplyGuard\.restart\(\)/);
+    assert.match(source, /if \(bindingApplyGuard\.running\)/);
+});
 
 test('restores native number bindings only for an owned legacy to system handoff', () => {
     assert.equal(requiresNativeRestore('legacy', 'system'), true);
