@@ -44,6 +44,7 @@ BarWidget {
     function open() { if (settingsPanelLoader.item) settingsPanelLoader.item.open(); }
     function close() { if (settingsPanelLoader.item) settingsPanelLoader.item.close(); }
     function toggle() { if (settingsPanelLoader.item) settingsPanelLoader.item.toggle(); }
+    function openOverview() { Local.GlobalStates.overviewOpen = true; }
     function focusWorkspace(id) {
         Hyprland.dispatch(`hl.dsp.focus({ workspace = "${id}" })`);
     }
@@ -61,6 +62,14 @@ BarWidget {
     onSettingsChanged: { applySettings(); injectPanel(); }
     Component.onCompleted: {
         applySettings();
+    }
+
+    // Keep the small gaps between workspace buttons useful as a mouse fallback
+    // too. The buttons above this area still handle their own left/right clicks.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.RightButton
+        onClicked: root.openOverview()
     }
 
     Loader {
@@ -82,7 +91,10 @@ BarWidget {
         text: "󰒓"
         tooltipText: "Overview workspace order"
         onPressed: function(buttonCode) {
-            if (buttonCode === Qt.LeftButton) root.toggle();
+            if (buttonCode === Qt.RightButton)
+                root.openOverview();
+            else if (buttonCode === Qt.LeftButton)
+                root.toggle();
         }
     }
 
@@ -118,7 +130,12 @@ BarWidget {
                 verticalPadding: 6
                 fixedWidth: Style.space(20)
                 fixedHeight: root.barSize
-                onPressed: root.focusWorkspace(modelData)
+                onPressed: function(buttonCode) {
+                    if (buttonCode === Qt.RightButton)
+                        root.openOverview();
+                    else
+                        root.focusWorkspace(modelData);
+                }
             }
         }
     }

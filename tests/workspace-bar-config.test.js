@@ -105,6 +105,15 @@ test('guards the binding transaction against its own configreloaded event', () =
     assert.match(source, /bindingApplyGuard\.restart\(\)/);
     assert.match(source, /if \(bindingApplyGuard\.running\)/);
 });
+test('bar widget provides a mouse fallback into Overview', () => {
+    const source = fs.readFileSync(require.resolve('../bar/widget.qml'), 'utf8');
+    assert.match(source, /function openOverview\(\)\s*\{\s*Local\.GlobalStates\.overviewOpen = true;/);
+    assert.equal((source.match(/buttonCode === Qt\.RightButton/g) ?? []).length, 2);
+    assert.match(source, /acceptedButtons:\s*Qt\.RightButton/);
+    assert.match(source, /onClicked: root\.openOverview\(\)/);
+    assert.match(source, /if \(buttonCode === Qt\.RightButton\)\s*\n\s*root\.openOverview\(\)/);
+    assert.match(source, /else\s*\n\s*root\.focusWorkspace\(modelData\)/);
+});
 
 test('restores native number bindings only for an owned legacy to system handoff', () => {
     assert.equal(requiresNativeRestore('legacy', 'system'), true);
