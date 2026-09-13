@@ -162,7 +162,8 @@ Item {
     readonly property real workspaceImplicitWidth: Math.floor(Math.min(thumbByWidth, thumbByHeight / maxWorkspaceAspect))
     readonly property real workspaceImplicitHeight: Math.floor(workspaceImplicitWidth * (screenH / screenW))
 
-    property real scale: workspaceImplicitWidth / screenW
+    // Keep the thumbnail scale separate from QQuickItem's built-in `scale`.
+    property real workspaceScale: workspaceImplicitWidth / screenW
 
     // Omarchy's current decoration:rounding is 0; keep the overview flat too.
     property real largeWorkspaceRadius: 0
@@ -620,7 +621,7 @@ Item {
                     property int colIndex: root.entryLocalColumn(index)
                     property int rowIndex: root.entryLocalRow(index)
                     property color defaultWorkspaceColor: {
-                        if (!root.configuredWallpaperPath || root.displayedWallpaperUrl == "") {
+                        if (!root.configuredWallpaperPath || root.displayedWallpaperUrl === "") {
                             return OmarchyTheme.tintedBackground;
                         }
                         return Appearance.colors.colSurfaceContainerLow;
@@ -740,7 +741,7 @@ Item {
                         anchors.fill: parent
                         onEntered: {
                             WorkspaceNavigation.setDragTarget(workspace.workspaceValue, workspace.isTrailingEmpty)
-                            if (GlobalStates.overviewDraggingFromWorkspace == GlobalStates.overviewDraggingTargetWorkspace) return;
+                            if (GlobalStates.overviewDraggingFromWorkspace === GlobalStates.overviewDraggingTargetWorkspace) return;
                             hoveredWhileDragging = true
                         }
                         onExited: {
@@ -787,7 +788,7 @@ Item {
                     id: window
                     required property string modelData
                     property int monitorId: windowData?.monitor
-                    property var monitor: ServiceManager.workspace.monitors.find(m => m.id == monitorId)
+                    property var monitor: ServiceManager.workspace.monitors.find(m => m.id === monitorId)
                     property string address: modelData
                     property var modelToplevel: {
                         const values = ToplevelManager.toplevels.values;
@@ -800,18 +801,18 @@ Item {
                     toplevel: modelToplevel
                     captureActive: GlobalStates.overviewOpen
                     monitorData: this.monitor
-                    scale: root.scale
+                    scale: root.workspaceScale
                     scaleX: {
                         const mon = window.monitor;
                         if (!mon)
-                            return root.scale;
+                            return root.workspaceScale;
                         const logicalWidth = root.usableLogicalWidth(mon, null);
                         return root.entryWidth(workspaceEntryIndex) / logicalWidth;
                     }
                     scaleY: {
                         const mon = window.monitor;
                         if (!mon)
-                            return root.scale;
+                            return root.workspaceScale;
                         const logicalHeight = root.usableLogicalHeight(mon, null);
                         return root.entryHeight(workspaceEntryIndex) / logicalHeight;
                     }
