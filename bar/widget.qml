@@ -21,16 +21,34 @@ BarWidget {
         const all = Hyprland.workspaces.values
             .map(workspace => Number(workspace.id))
             .filter(id => id > 0 && id <= 100);
-        if (mode !== "legacy")
-            return Local.HyprlandData.systemWorkspaceIds();
-
         const occupied = all.filter(id => {
             const workspace = Local.HyprlandData.workspaceById[id];
             return workspace && Local.HyprlandData.workspaceHasVisibleWindows(id)
                 && (!root.targetMonitorName
                     || Local.HyprlandData.workspaceMonitorName(workspace) === root.targetMonitorName);
         });
-        return Local.WorkspaceOrder.orderIdsForMonitor(root.targetMonitorName, occupied);
+        const visual = mode !== "legacy"
+            ? Local.HyprlandData.systemWorkspaceIds()
+            : Local.WorkspaceOrder.orderIdsForMonitor(root.targetMonitorName, occupied);
+        const occupiedSet = ({});
+        for (const id of occupied)
+            occupiedSet[id] = true;
+        const mru = Local.GlobalStates.overviewWorkspaceMru ?? [];
+        const ordered = [];
+        const added = ({});
+        for (const id of mru) {
+            if (occupiedSet[id] && !added[id]) {
+                ordered.push(id);
+                added[id] = true;
+            }
+        }
+        for (const id of visual) {
+            if (!added[id] && (mode !== "legacy" || occupiedSet[id])) {
+                ordered.push(id);
+                added[id] = true;
+            }
+        }
+        return ordered;
     }
 
     function applySettings() {

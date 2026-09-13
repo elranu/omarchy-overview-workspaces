@@ -11,7 +11,7 @@ Panel {
 
     property var anchorItem: null
     property var hostWidget: null
-    readonly property string pluginVersion: "0.1.9"
+    readonly property string pluginVersion: "0.1.10"
     readonly property color panelForeground: Color.popups.text
     readonly property color panelMuted: Util.alpha(Color.popups.text, 0.58)
 
@@ -186,7 +186,7 @@ Panel {
                         }
 
                         Text {
-                            text: "Choose the plugin's optimized order or Omarchy's native order."
+                            text: "Choose whether native empty workspace slots are shown; occupied workspaces always follow MRU order."
                             width: parent.width
                             wrapMode: Text.WordWrap
                             color: root.panelMuted
@@ -196,8 +196,8 @@ Panel {
 
                         Repeater {
                             model: [
-                                { key: "legacy", title: "Optimized order (recommended)", detail: "Plugin-managed dynamic order; Win+number follows slots 1, 2, 3... and New workspace stays last." },
-                                { key: "system", title: "System native order", detail: "Matches Omarchy's native slots 1–10, including empty slots, plus real 11+ workspaces." }
+                                { key: "legacy", title: "Occupied workspaces only", detail: "Shows occupied workspaces in MRU order; the New workspace card stays last." },
+                                { key: "system", title: "Show native empty slots", detail: "Keeps native slots 1–10 and real 11+ workspaces visible; occupied slots still follow MRU order." }
                             ]
 
                             delegate: Rectangle {

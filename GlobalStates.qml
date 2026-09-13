@@ -106,6 +106,9 @@ Singleton {
     function promoteWorkspaceMru(wsId) {
         if (wsId < 1)
             return;
+        if (GlobalStates.overviewWorkspaceMru.length > 0
+                && GlobalStates.overviewWorkspaceMru[0] === wsId)
+            return;
         const next = GlobalStates.overviewWorkspaceMru.filter(id => id !== wsId);
         next.unshift(wsId);
         GlobalStates.overviewWorkspaceMru = next;

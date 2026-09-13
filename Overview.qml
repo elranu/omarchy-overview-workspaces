@@ -110,7 +110,7 @@ Scope {
 
         let entries = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
         if (entries.length === 0)
-            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal();
+            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal(true);
 
         const entry = entries[slot - 1];
         if (!entry)

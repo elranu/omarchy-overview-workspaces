@@ -45,7 +45,8 @@ Singleton {
         const _serial = root.dataSerial;
         const _refresh = GlobalStates.overviewRefreshSerial;
         const _order = WorkspaceOrder.revision;
-        void _serial; void _refresh; void _order;
+        const _mru = GlobalStates.overviewWorkspaceMru;
+        void _serial; void _refresh; void _order; void _mru;
         return root.overviewWorkspaceEntriesGroupedByMonitor() ?? [];
     }
 
@@ -86,6 +87,12 @@ Singleton {
         return root.hyprlandClientsForWorkspace(workspaceId).some(
             win => win.mapped && !win.hidden
         );
+    }
+
+    function promoteActiveWorkspaceIfOccupied() {
+        const wsId = root.activeWorkspace?.id ?? 0;
+        if (wsId > 0 && root.workspaceHasVisibleWindows(wsId))
+            GlobalStates.promoteWorkspaceMru(wsId);
     }
 
     function isRegularWorkspace(ws) {
@@ -213,7 +220,9 @@ Singleton {
     }
 
     function overviewWorkspaceEntriesForMonitor(monitorName, appendTrailing, reservedWorkspaceIds, orderByMru, includeEmptySystemSlots) {
-        const useMruOrder = orderByMru ?? false;
+        // Keep the argument for compatibility with older callers, but make
+        // MRU the one presentation order everywhere.
+        const useMruOrder = true;
         const targetMonitor = monitorName ?? "";
         const showEmptySystemSlots = includeEmptySystemSlots ?? (targetMonitor.length === 0);
         const reserved = reservedWorkspaceIds ?? {};
@@ -312,8 +321,8 @@ Singleton {
             });
         });
 
-        // Normal Overview follows the same numeric order as the Omarchy bar.
-        // The transient Win+Tab switcher may still opt into MRU ordering.
+        // Every presentation uses MRU ordering for occupied workspaces. The
+        // system mode only controls whether empty native slots are included.
         const orderedIds = useSystemOrder
             ? withWindows.map(entry => entry.id).sort((a, b) => a - b)
             : (targetMonitor.length > 0
@@ -417,7 +426,7 @@ Singleton {
     }
 
     function overviewWorkspaceEntriesGlobal(orderByMru) {
-        return root.overviewWorkspaceEntriesForMonitor("", true, {}, orderByMru ?? false, true);
+        return root.overviewWorkspaceEntriesForMonitor("", true, {}, true, true);
     }
 
     function sortedOverviewMonitors() {
@@ -434,7 +443,7 @@ Singleton {
         const reservedIds = {};
         for (let i = 0; i < monitors.length; ++i) {
             const mon = monitors[i];
-            const entries = root.overviewWorkspaceEntriesForMonitor(mon.name, true, reservedIds, false, false);
+            const entries = root.overviewWorkspaceEntriesForMonitor(mon.name, true, reservedIds, true, false);
             for (let j = 0; j < entries.length; ++j) {
                 entries[j].monitorIndex = i;
                 entries[j].monitorLabel = mon.description || mon.name || `Monitor ${i + 1}`;
@@ -445,7 +454,7 @@ Singleton {
             }
         }
         if (all.length === 0)
-            return root.overviewWorkspaceEntriesGlobal();
+            return root.overviewWorkspaceEntriesGlobal(true);
         return all;
     }
 
@@ -629,6 +638,11 @@ Singleton {
                         !root.pendingWorkspaceSettled(entry)
                     );
                 }
+                // A new window can appear after the workspace-focus event. In
+                // that case the focus handler saw an empty workspace and could
+                // not promote it; this snapshot is the first reliable point at
+                // which the workspace is known to be occupied.
+                root.promoteActiveWorkspaceIfOccupied();
                 root.syncWorkspaceOrder();
                 root.markDataChanged();
             }

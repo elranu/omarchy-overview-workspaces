@@ -1,5 +1,12 @@
 # Overview Workspaces
 
+## 0.1.10
+
+- Use one Windows-style MRU order for the Overview grid, top-bar workspace
+  buttons, Win+number navigation, and Win+Tab switching. Occupied workspaces
+  move to the front when focused; empty/native slots and the New workspace card
+  remain outside MRU and stay after occupied workspaces.
+
 ## 0.1.9
 
 - Restored automatic Win/Super, Win+Tab, and optimized Win+number bindings on
@@ -69,7 +76,8 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
   crosshair, and clicking a window kills only that client. Press `Escape` or
   right-click to cancel without killing anything.
 - Keyboard navigation with arrows, H/J/K/L, Tab, Enter, Space, and Escape.
-- MRU workspace switching with Win+Tab and Win+Shift+Tab.
+- Windows-style MRU ordering for workspaces across Overview, the top bar,
+  Win+number, Win+Tab, and Win+Shift+Tab.
 - Search for applications, open windows, and Omarchy menu actions from Overview.
 - Per-monitor workspace previews, configurable from the gear panel.
 - Right-click any part of the top-bar workspace widget to open Overview as a
@@ -102,16 +110,16 @@ Enabling automatically replaces the built-in workspace indicator; disabling rest
 
 Open the gear button in the top bar to choose a mode.
 
-**Optimized order (recommended)**
+**Occupied workspaces only**
 
-- Workspaces with windows receive dynamic visual slots `1, 2, 3...`.
+- Workspaces with windows are displayed in Windows-style MRU order.
 - Win+1 through Win+0 follow those visual slots.
 - The New workspace card always stays last.
 - The top bar and Overview use the same order.
 
 **System native order**
 
-- Mirrors Omarchy's native workspace IDs.
+- Keeps occupied workspaces in MRU order while also showing native empty slots.
 - Empty workspaces 1–10 remain visible.
 - Existing workspaces 11, 12, 13, and higher remain visible.
 - Native IDs are not renumbered.
@@ -197,7 +205,7 @@ Overview Workspaces 是一个用于 Omarchy Quattro 的体验增强插件。它�
 - 每个显示器的最后始终保留一个“新工作区”。
 - 支持鼠标选择、窗口聚焦、窗口拖拽和多显示器布局。
 - 支持方向键、H/J/K/L、Tab、Enter、Space、Escape。
-- 使用 Win+Tab 和 Win+Shift+Tab 按 MRU 顺序切换工作区。
+- Overview、顶栏、Win+数字、Win+Tab 和 Win+Shift+Tab 都按 Windows 式 MRU 顺序排列工作区；空工作区和新工作区不参与 MRU，并保持在后面。
 - 可以在 Overview 中搜索应用、已打开的窗口和 Omarchy 菜单操作。
 - 支持按显示器隔离工作区预览，并可在齿轮面板中配置。
 - 右键点击顶栏工作区区域的任意位置都可以打开 Overview，作为快捷键失效时的鼠标回退入口。
@@ -318,7 +326,7 @@ Overview Workspaces は Omarchy Quattro の操作体験を強化するプラグ�
 - 各モニターの最後に常に「新しいワークスペース」を表示。
 - マウス選択、ウィンドウのフォーカス、ドラッグ、マルチモニターに対応。
 - 矢印キー、H/J/K/L、Tab、Enter、Space、Escape に対応。
-- Win+Tab と Win+Shift+Tab による MRU 切り替え。
+- Overview、トップバー、Win+数字、Win+Tab、Win+Shift+Tab のすべてで Windows 風の MRU 順にワークスペースを表示。空のワークスペースと新しいワークスペースは MRU の対象外で後ろに残ります。
 - Overview からアプリ、開いているウィンドウ、Omarchy メニュー操作を検索。
 - モニターごとのワークスペースプレビューに対応し、歯車パネルで設定可能。
 - トップバーのワークスペース領域を右クリックすると、キーボードショートカットの代替として Overview を開けます。
