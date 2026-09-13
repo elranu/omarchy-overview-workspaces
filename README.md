@@ -53,7 +53,7 @@ Overview Workspaces is an Omarchy Quattro experience-enhancement plugin. It prov
 ## Marketplace
 
 Overview Workspaces has been approved and verified in the Omarchy plugin marketplace:
-[open the published marketplace page](https://omarchyplugins.com/plugin.html?id=hancore.overview-workspaces).
+[open the published marketplace page](https://plugins.omarchy.org/plugin.html?id=hancore.overview-workspaces).
 
 ## English
 

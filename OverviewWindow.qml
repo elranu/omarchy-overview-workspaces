@@ -64,10 +64,13 @@ Item { // Window
     // Raw coordinate relative to the monitor the window claims to be on.
     // These may be stale after a cross-monitor move — Hyprland does not
     // re-tile windows on inactive workspaces.
-    property real rawRelX: (windowData?.at[0] ?? 0) - (monitorData?.x ?? 0) - (monitorData?.reserved[0] ?? 0)
-    property real rawRelY: (windowData?.at[1] ?? 0) - (monitorData?.y ?? 0) - (monitorData?.reserved[1] ?? 0)
-    property real rawW: windowData?.size[0] ?? 800
-    property real rawH: windowData?.size[1] ?? 600
+    // During an output reconfigure Hyprland can publish a partial monitor or
+    // client object for one event-loop turn. Keep every nested array access
+    // safe while those snapshots are being replaced.
+    property real rawRelX: (windowData?.at?.[0] ?? 0) - (monitorData?.x ?? 0) - (monitorData?.reserved?.[0] ?? 0)
+    property real rawRelY: (windowData?.at?.[1] ?? 0) - (monitorData?.y ?? 0) - (monitorData?.reserved?.[1] ?? 0)
+    property real rawW: windowData?.size?.[0] ?? 800
+    property real rawH: windowData?.size?.[1] ?? 600
 
     // After scaling and clamping, would this window be too small to see?
     // This happens when stale coordinates place the window near/past the
