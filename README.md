@@ -16,17 +16,6 @@ Panorama is a multi-monitor workspace overview for Omarchy. It provides a full-s
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
 
-## Credits
-
-Panorama is a fork of
-[iamcheyan/omarchy-overview-workspaces](https://github.com/iamcheyan/omarchy-overview-workspaces)
-(Overview Workspaces, by HANCORE), which is published separately in the Omarchy
-plugin marketplace. Panorama adds multi-monitor support, such as dragging windows
-between monitors, and follows its own release line. Both are MIT licensed.
-
-Panorama and Overview Workspaces take over the same Win/Super bindings, so enable
-only one of them at a time.
-
 ## Features
 
 - Press the standalone Win/Super key to open or close Overview.
@@ -191,3 +180,14 @@ qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
 node --test
 ```
+
+## Credits
+
+Panorama is a fork of
+[iamcheyan/omarchy-overview-workspaces](https://github.com/iamcheyan/omarchy-overview-workspaces)
+(Overview Workspaces, by HANCORE), which is published separately in the Omarchy
+plugin marketplace. Panorama adds multi-monitor support, such as dragging windows
+between monitors, and follows its own release line. Both are MIT licensed.
+
+Panorama and Overview Workspaces take over the same Win/Super bindings, so enable
+only one of them at a time.
