@@ -16,3 +16,11 @@ test('control characters from Enter, Escape, Tab, Backspace and Delete do not', 
     for (const text of ['\r', '\n', '\x1b', '\t', '\b', '\x7f', '', undefined, null])
         assert.equal(isTypedText(text), false, JSON.stringify(text));
 });
+
+test('C1 control characters are rejected, and so is text containing one', () => {
+    for (const text of ['\u0080', '\u0085', '\u009f', 'ab\u0085'])
+        assert.equal(isTypedText(text), false, JSON.stringify(text));
+    // The printable characters on either side of the range still count.
+    assert.equal(isTypedText('\u007e'), true);
+    assert.equal(isTypedText('\u00a0'), true);
+});
