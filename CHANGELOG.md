@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Enter now opens the selected workspace when "Keep h/j/k/l for navigation" is
+  off. It used to start a search because Enter reports a carriage return as
+  its text, which left the Overview open and made Escape seem to do nothing.
+
 ## 0.2.0
 
 - Forked from Overview Workspaces and renamed to Panorama, with plugin id
