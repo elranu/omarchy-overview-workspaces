@@ -1,8 +1,9 @@
-# 商店审核注意事项（Marketplace Review Notes）
+# Marketplace review notes
 
-> 2026-08-22 整理。来源：本插件 issue
-> [#1401](https://github.com/omacom/omarchy-plugin-marketplace/issues/1401)
-> 及兄弟插件 #1468、#1428 的审核往返。供上架前自查与复审对照。
+> Compiled 2026-08-22 from the review of this plugin's original submission,
+> [#1401](https://github.com/omacom/omarchy-plugin-marketplace/issues/1401), and
+> of sibling plugins #1468 and #1428. Use it as a self-check before submitting
+> and when responding to a re-review.
 
 ## Published status
 
@@ -12,48 +13,67 @@ https://plugins.omarchy.org/plugin.html?id=hancore.overview-workspaces
 The marketplace verification applies to the published snapshot and is not a
 security audit.
 
-## 一、商店审核机制速览
+## 1. How marketplace review works
 
-1. **按精确 HEAD 审核**：维护者引用具体 commit SHA 复核。修复必须：上游提交 →
-   issue 评论附 commit 链接 → 等按新 HEAD 复审。本地改完不推送 = 审核看不到。
-2. **自动化基线**：扫描 `pkexec`/`sudo`/`systemctl`/`make` 模式，命中标
-   `privilege`/`service-management` 能力。本仓基线 **passed、零能力标记**——这是优势，保持住。
-3. **人工复审**只盯两类事：供应链完整性、资源与注入边界；语言精确到 `文件:行号`。
+1. **Review is pinned to an exact HEAD.** Maintainers re-check a specific commit
+   SHA. A fix must be pushed, linked from an issue comment, and then re-reviewed
+   at the new HEAD. Local changes that are not pushed are invisible to review.
+2. **Automated baseline.** It scans for `pkexec`/`sudo`/`systemctl`/`make`
+   patterns and flags hits with `privilege`/`service-management` capabilities.
+   This repository's baseline **passed with zero capability flags**. That is an
+   advantage; keep it that way.
+3. **Manual review** focuses on two things: supply-chain integrity, and resource
+   and injection boundaries. Feedback is precise down to `file:line`.
 
-## 二、审核人在意的点（从三单反馈提炼）
+## 2. What reviewers care about (from the three reviews)
 
-| # | 关注点 | 出处 | 判例 |
-|---|--------|------|------|
-| 1 | 供应链固定：不 clone moving-HEAD、不以 root 构建下载物 | #1468 | unpinned remote-to-root path 被打回 |
-| 2 | TOCTOU：校验后的用户可写路径不得再交特权步骤执行 | #1468 | make in user cache 被打回 |
-| 3 | 资源无界：下载按声明大小截断 | #1428 | EOF 下载撑爆磁盘被打回 |
-| 4 | **注入面：外部数据渲染必须显式 PlainText** | **#1401 本仓判例** | hyprctl clients 标题经 AutoText 可触发富文本资源加载 |
-| 5 | 提权纪律：固定内联命令、用户显式触发 | #1428 ONNX | 固定串 pkexec 通过 |
-| 6 | 卸载卫生：不在用户配置留悬挂钩子 | 提交清单 | explicit consent 条款 |
-| 7 | 仓库卫生：无产物入库、README/license/preview 齐、版本递增 | 三单通用 | bot 校验 manifest 唯一性 |
+| # | Concern | Source | Precedent |
+|---|---------|--------|-----------|
+| 1 | Pinned supply chain: no cloning a moving HEAD, no building downloads as root | #1468 | Unpinned remote-to-root path was rejected |
+| 2 | TOCTOU: a user-writable path that was validated must not then be handed to a privileged step | #1468 | `make` in the user cache was rejected |
+| 3 | Unbounded resources: downloads must be truncated at their declared size | #1428 | Download until EOF filling the disk was rejected |
+| 4 | **Injection surface: externally sourced text must render as explicit PlainText** | **#1401, this repository** | hyprctl client titles rendered through AutoText could trigger rich-text resource loading |
+| 5 | Privilege discipline: fixed inline commands, explicitly triggered by the user | #1428 ONNX | A fixed-string pkexec passed |
+| 6 | Uninstall hygiene: no dangling hooks left in user configuration | Submission checklist | Explicit consent clause |
+| 7 | Repository hygiene: no build artifacts committed; README, license, and preview present; version bumped | All three | The bot checks manifest id uniqueness |
 
-## 三、本仓库反馈与修复状态
+## 3. Feedback on this repository and fix status
 
-- 审核人 ryanrhughes（collaborator）：`HyprlandData.qml:557-573`、`OverviewWidget.qml`
-  的窗口标题/类名经 `StyledText`（默认 `Text.AutoText`）渲染，本地应用可用 markup 形状
-  的标题在常驻 shell 里触发富文本资源加载。
-- 已修：`594826a` StyledText 改 `Text.PlainText`。2026-08-22 深查结论见下节。
+- Reviewer ryanrhughes (collaborator): window titles and class names in
+  `HyprlandData.qml:557-573` and `OverviewWidget.qml` were rendered through
+  `StyledText` (default `Text.AutoText`), so a local application could use a
+  markup-shaped title to trigger rich-text resource loading in the long-lived
+  shell.
+- Fixed in `594826a`: `StyledText` now uses `Text.PlainText`. See the audit below
+  (2026-08-22).
 
-## 四、本仓库对照自查要点（2026-08-22 深查）
+## 4. Self-check for this repository (2026-08-22 audit)
 
-- [x] **PlainText 覆盖面**：全文件核查完毕，所有渲染 hyprctl 标题/类名/标签的点都经
-      StyledText（PlainText）；裸 `text:` 绑定均为内部常量。
-- [x] **service 入口 bash -lc 拼装**：已在 `bindingScript` 前声明注入不变量
-      （只允许常量表与整数插值），当前内容全部为常量。
-- [x] **Sumika 移植残留清理**：会话菜单/重载 Shell（后端二进制不存在）整体删除；
-      `>command` 模式改用系统自带 `xdg-terminal-exec` 直接派生（保留功能、去
-      `sumika-detach`）；trailing 工作区回车启动器行为移除（无替代二进制），仅保留聚焦；
-      `Directories.root` 死属性删除，`sumikaStateHome` 更名 `stateHome`。
-- [x] **workspace-order.json 写入门控修复**：Omarchy shell 从不设置 `SUMIKA_APP_DIR`，
-      原 isWriter 判定恒 false，排序持久化从未写入。现未设置该变量即视为本插件持有写权，
-      保留上游 Sumika 环境下的原有选举语义。
-- [x] Wallpaper 轮询改为仅概览可见时运行，打开瞬间额外刷新一次。
-- [x] Persistent.qml 经核实**并非死代码**（OverviewWindow.qml:127 在消费），保留；
-      Config.qml `arbitraryRaceConditionDelay=50` 为既有时序参数，不动。
-- [x] 无 pkexec/sudo/keyd 类特权面；hyprctl 全部用户态 detached 运行。
-- [x] 已有 `tests/menu-index.test.js` 与 `tests/workspace-bar-config.test.js`。绑定脚本、系统/优化排序、trailing id、pending 搬家仍是手工回归。
+- [x] **PlainText coverage**: every file was checked. Every place that renders
+      hyprctl titles, class names, or labels goes through `StyledText`
+      (PlainText); bare `text:` bindings are internal constants.
+- [x] **`bash -lc` assembly in the service entry point**: an injection invariant is
+      declared before `bindingScript` (only constant tables and integer
+      interpolation are allowed); all current content is constant.
+- [x] **Leftovers from the Sumika port removed**: the session menu and Shell reload
+      (whose backend binary does not exist) were deleted entirely; `>command` mode
+      now spawns the system `xdg-terminal-exec` directly (feature kept, without
+      `sumika-detach`); the Enter-to-launcher behavior on the trailing workspace
+      was removed (no replacement binary), keeping only focus; the dead
+      `Directories.root` property was deleted and `sumikaStateHome` was renamed
+      `stateHome`.
+- [x] **`workspace-order.json` write gate fixed**: Omarchy shell never sets
+      `SUMIKA_APP_DIR`, so the old `isWriter` check was always false and ordering
+      was never persisted. Now the plugin owns the write when that variable is not
+      set, while keeping the original election semantics under Sumika.
+- [x] Wallpaper polling now runs only while Overview is visible, with one extra
+      refresh the moment it opens.
+- [x] `Persistent.qml` was confirmed **not to be dead code** at the time
+      (`OverviewWindow.qml:127` consumed it) and was kept;
+      `Config.qml`'s `arbitraryRaceConditionDelay=50` is an existing timing
+      parameter and was left alone.
+- [x] No pkexec/sudo/keyd-style privilege surface; all hyprctl calls run detached
+      in user space.
+- [x] `tests/menu-index.test.js` and `tests/workspace-bar-config.test.js` exist.
+      The binding script, system/optimized ordering, trailing ids, and pending
+      moves are still manually regression-tested.

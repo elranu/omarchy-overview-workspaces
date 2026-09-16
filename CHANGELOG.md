@@ -1,0 +1,48 @@
+# Changelog
+
+## 0.1.10
+
+- Use one Windows-style MRU order for the Overview grid, top-bar workspace
+  buttons, Win+number navigation, and Win+Tab switching. Occupied workspaces
+  move to the front when focused; empty/native slots and the New workspace card
+  remain outside MRU and stay after occupied workspaces.
+
+## 0.1.9
+
+- Restored automatic Win/Super, Win+Tab, and optimized Win+number bindings on
+  Omarchy 4 by using its capability-scoped `barConfig` API.
+- Kept compatibility with older Omarchy hosts without requesting access to the
+  full shell configuration.
+- Remove the raw Super-key listener when the plugin service is disabled or
+  destroyed, so no Overview event observer remains behind.
+- Restore native Win+number bindings when changing from optimized ordering to
+  system ordering, preventing stale Overview slots after a later disable.
+- Document the required Shell restart after updating an existing enabled copy;
+  Omarchy intentionally preserves `keepLoaded` services during plugin rescans.
+
+## 0.1.8
+
+- Added a guarded force-kill mode to Overview: press `Ctrl+Shift+X`, then click
+  a window to terminate only that client by address.
+- The mode hides the themed system cursor and shows the JetBrainsMono Nerd Font
+  close glyph `󰅖` next to the pointer. `Escape` or right-click cancels safely.
+
+## 0.1.7
+
+- System-native mode keeps Omarchy's Win+1…0 workspace binds instead of
+  leaving those keys unbound.
+- While Overview is open, the plugin temporarily guards Super+mouse move/resize
+  so the native window operation cannot compete with preview dragging.
+- System-native Overview no longer copies another monitor's workspaces into
+  the current screen, and each monitor gets its own New workspace id.
+- Search, lint, and menu paths follow `$OMARCHY_PATH` on NixOS and Arch.
+- Application icons use the same filesystem index as Omarchy's app library.
+- Overview and window previews fade in smoothly without changing user mouse bindings.
+
+## 0.1.3
+
+- Added the current plugin version to the workspace-order popup.
+- Made the popup options responsive and scrollable when large text or a
+  smaller display leaves less vertical space.
+- Adapted the settings panel and overview scrim to theme-derived popup and
+  background colors; removed the hard-coded dark scrim color.

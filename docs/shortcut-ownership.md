@@ -1,48 +1,87 @@
-# 快捷键所有权与生命周期
+# Shortcut ownership and lifecycle
 
-## 插件拥有的范围
+## What the plugin owns
 
-启用 `hancore.overview-workspaces` 后，插件只负责这些快捷键：
+When `hancore.overview-workspaces` is enabled, the plugin is responsible only for:
 
-- 单独按 Win：打开或关闭工作区预览；
-- Win+Tab、Win+Shift+Tab：预览中循环工作区；
-- Win+数字：在 legacy 排序模式下选择预览中的工作区槽位。
-- `Ctrl+Shift+X`：进入强制结束模式；系统光标隐藏，并在鼠标旁显示 JetBrainsMono
-  Nerd Font 的关闭图标 `󰅖`。点击窗口后只强制结束被点击的那个 client；`Esc` 或鼠标
-  右键取消该模式，不会结束任何窗口。
+- standalone Win: open or close the workspace Overview;
+- Win+Tab and Win+Shift+Tab: cycle workspaces in Overview;
+- Win+number: select an Overview workspace slot in legacy (optimized) ordering;
+- `Ctrl+Shift+X`: arm force-kill mode. The system cursor is hidden and the
+  JetBrainsMono Nerd Font close glyph `󰅖` is drawn next to the pointer. Clicking a
+  window force-kills only that client; `Esc` or right-click cancels the mode
+  without killing anything.
 
-插件可以在预览拖拽期间临时暂停 Win+鼠标移动和缩放，这是为了防止拖拽窗口同时触发 Hyprland 的移动或缩放。预览关闭后必须恢复这些绑定。
+While a preview is being dragged, the plugin may temporarily suspend Win+mouse
+move and resize, so dragging a preview does not also trigger Hyprland's own
+move or resize. Those bindings must be restored when Overview closes.
 
-## 禁止触碰的范围
+## What the plugin must not touch
 
-插件不得注册或删除以下绑定：
+The plugin must not register or remove:
 
-- `SUPER + <任意普通键>` 的通用观察器；
-- `SUPER + CTRL + <任意普通键>` 的通用观察器；
-- 用户未委托给插件的快捷键；
-- 用户快捷键的命令、回调、参数、描述和选项。
+- catch-all observers for `SUPER + <any regular key>`;
+- catch-all observers for `SUPER + CTRL + <any regular key>`;
+- any shortcut the user has not delegated to the plugin;
+- the command, callback, arguments, description, or options of user shortcuts.
 
-因此 `Win+W`、`Win+Enter`、`Win+Space`、`Ctrl+Win+V` 以及用户自己定义的其它组合，都不能通过 interrupt 列表处理。
+So `Win+W`, `Win+Enter`, `Win+Space`, `Ctrl+Win+V`, and any other user-defined
+combination must never be handled through an interrupt list.
 
-## 单独 Win 的判定
+## Detecting a standalone Win press
 
-单独 Win 必须通过 `input.keyboard.key` 事件判断：
+A standalone Win press must be detected from `input.keyboard.key` events:
 
-1. Win 按下时记录候选状态；
-2. 任意其它键按下时取消候选状态，不论 Ctrl、Win 或普通键谁先按；
-3. 只有候选状态仍然有效并且 Win 释放时，才切换工作区预览。
+1. When Win goes down, record a candidate state.
+2. When any other key goes down, cancel the candidate, regardless of whether
+   Ctrl, Win, or the regular key was pressed first.
+3. Toggle the Overview only if the candidate is still valid when Win is released.
 
-这样不会为了识别组合键而创建一批会和用户绑定竞争的 `SUPER + key` 绑定。
+This avoids creating a batch of `SUPER + key` bindings that would compete with
+user bindings just to recognize combinations.
 
-## 启用、禁用和重载
+## Enable, disable, and reload
 
-插件接管的 Win、Win+Tab、Win+数字绑定只存在于 Hyprland 运行时。插件禁用或销毁时，必须使用 `hyprctl eval` 精确撤销插件自己的绑定，并恢复插件接管前保存的用户绑定。**禁止调用 `hyprctl reload`**，也禁止用硬编码的 Omarchy 默认命令代替恢复，因为前者会重载整个 Hyprland，后者会丢失用户自定义的命令和选项。
+The Win, Win+Tab, and Win+number bindings the plugin takes over exist only in
+Hyprland's runtime state. When the plugin is disabled or destroyed, it must use
+`hyprctl eval` to remove exactly its own bindings and restore the user bindings
+it saved before taking over. **Never call `hyprctl reload`**, and never restore
+by hard-coding Omarchy's default commands: the former reloads all of Hyprland,
+the latter loses the user's custom commands and options.
 
-Hyprland 的 `hl.unbind("...")` 不记录绑定来源，可能删除用户绑定。因此只能对插件明确拥有的表达式使用它；不得把它用于通用键列表，也不得在诊断时手动解绑用户快捷键。
+Hyprland's `hl.unbind("...")` does not track where a binding came from and can
+remove user bindings. Only use it on chords the plugin explicitly owns; never on
+a generic key list, and never to unbind user shortcuts by hand while diagnosing.
 
-## 每次修改后的检查
+A Hyprland config reload clears all runtime bindings. The service listens for
+`configreloaded`, clears `appliedMode`, and re-applies its bindings after a short
+delay; without that, native bindings come back but the Overview bindings stay
+missing while the service believes they are still installed.
 
-至少执行：
+## Diagnosing broken shortcuts or a missing bar
+
+Collect evidence in this order before changing anything:
+
+1. `ps`: confirm Quickshell is running.
+2. `hyprctl layers`: confirm `omarchy-bar` exists.
+3. `hyprctl binds -j`: save a snapshot of native and plugin bindings.
+4. Compare with `$OMARCHY_PATH/default/hypr/bindings/` and the user's `bindings.lua`.
+5. Check the Quickshell log for startups, exits, and QML errors.
+6. Only once the shell is alive and the bindings exist, look at input devices or
+   keyboard layouts.
+
+A missing top bar usually means the Quickshell process is restarting (the log
+shows `Exiting due to IPC request` followed by a new startup), not that the bar
+component was hidden. Overlapping hot reloads and manual shell restarts widen
+that window and can print `An instance of this configuration is already running`.
+
+Stale runtime bindings left by an older plugin version are not removed by
+updating the QML files. Clean them up with one controlled Hyprland config reload
+followed by `omarchy restart shell`.
+
+## Checks after every change
+
+At minimum run:
 
 ```sh
 npm test
@@ -51,4 +90,7 @@ hyprctl configerrors
 hyprctl binds -j
 ```
 
-核对运行态中只有插件声明的快捷键带有 `Overview` 描述，并确认原生 `SUPER + W`、`SUPER + RETURN`、`SUPER + SPACE` 仍然存在。最后重启 shell，确认插件重载后这些结果不变。
+Confirm that only the shortcuts the plugin declares carry an `Overview`
+description at runtime, and that the native `SUPER + W`, `SUPER + RETURN`, and
+`SUPER + SPACE` bindings still exist. Finally restart the shell and confirm the
+results are unchanged after the plugin reloads.

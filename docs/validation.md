@@ -1,20 +1,22 @@
-# Overview Workspaces 验证流程
+# Overview Workspaces validation procedure
 
-这份文档是每次修改插件后的固定验收清单。它覆盖静态检查、自动测试、Shell
-运行时检查和 Overview 交互检查。所有命令都应在插件目录
-`hancore.overview-workspaces/` 中执行。
+This is the fixed acceptance checklist to run after every change to the plugin.
+It covers static checks, automated tests, Shell runtime checks, and Overview
+interaction checks. Run all commands from the plugin directory
+`hancore.overview-workspaces/`.
 
-## 1. 修改前确认
+## 1. Before changing anything
 
 ```sh
 git status --short --branch
 git diff --check
 ```
 
-确认没有把其他插件或用户配置的改动混入本次提交。插件开发期间不要在
-Overview 正打开或正在拖拽窗口时执行热扫描。
+Make sure no changes to other plugins or user configuration are mixed into the
+commit. During development, do not trigger a plugin hot rescan while Overview is
+open or a window is being dragged.
 
-## 2. 自动检查
+## 2. Automated checks
 
 ```sh
 node --test
@@ -24,14 +26,15 @@ qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
 ```
 
-验收标准：
+Acceptance criteria:
 
-- `node --test` 全部通过；测试数量以当前仓库为准（目前为 51 个）。
-- `omarchy plugin validate .` 返回成功且没有 manifest 错误。
-- `qmllint` 不出现新的 QML 错误。某些环境下由于 Quickshell 的运行时导入路径，
-  可能出现 `Failed to import QtQuick` 或未解析 composite type 警告；这类警告
-  不能替代运行时测试。
-- 插件生命周期代码中禁止出现完整 Hyprland reload：
+- `node --test` passes completely; the test count is whatever the repository
+  currently has (51 at the moment).
+- `omarchy plugin validate .` succeeds with no manifest errors.
+- `qmllint` reports no new QML errors. Because of Quickshell's runtime import
+  paths, some environments print `Failed to import QtQuick` or unresolved
+  composite type warnings; those warnings are not a substitute for runtime tests.
+- The plugin lifecycle code must not contain a full Hyprland reload:
 
 ```sh
 if rg -n 'hyprctl.*reload|reload.*hyprctl' . -g '*.qml'; then
@@ -40,7 +43,7 @@ if rg -n 'hyprctl.*reload|reload.*hyprctl' . -g '*.qml'; then
 fi
 ```
 
-## 3. Shell 运行时检查
+## 3. Shell runtime checks
 
 ```sh
 OMARCHY_SHELL_IPC_TIMEOUT=1s omarchy-shell shell ping
@@ -52,17 +55,19 @@ ps -p "$pid" -o pid,ppid,stat,etime,pcpu,pmem,cmd
 hyprctl layers
 ```
 
-验收标准：
+Acceptance criteria:
 
-- Shell ping 返回 `ok`。
-- overview 插件为 `enabled: true`。
-- `hyprctl layers` 中存在 `namespace: omarchy-bar`。
-- Quickshell 进程存在并保持运行；启动后短暂高 CPU 可以接受，但等待约 30 秒
-  后不应持续攀升或变成 IPC 无响应。
+- Shell ping returns `ok`.
+- The overview plugin is `enabled: true`.
+- `hyprctl layers` contains `namespace: omarchy-bar`.
+- The Quickshell process exists and stays running. A short CPU spike after
+  startup is fine, but after about 30 seconds it must not keep climbing or stop
+  answering IPC.
 
-## 4. Overview 显示和鼠标检查
+## 4. Overview display and mouse checks
 
-命令行可以检查 layer 和 IPC；实际鼠标右键还必须手动确认：
+The command line can check layers and IPC; actual right-clicks must still be
+confirmed by hand:
 
 ```sh
 OMARCHY_SHELL_IPC_TIMEOUT=1s \
@@ -72,21 +77,21 @@ OMARCHY_SHELL_IPC_TIMEOUT=1s \
   omarchy-shell shell hide hancore.overview-workspaces
 ```
 
-在顶栏 overview 工作区区域分别确认：
+In the top-bar overview workspace area, confirm each of these:
 
-1. 右键点击工作区数字：打开 Overview。
-2. 右键点击齿轮：打开 Overview。
-3. 右键点击数字之间的空隙：打开 Overview。
-4. 左键点击工作区数字：仍然切换工作区。
-5. 左键点击齿轮：仍然打开设置面板。
+1. Right-click a workspace number: Overview opens.
+2. Right-click the gear: Overview opens.
+3. Right-click the gap between numbers: Overview opens.
+4. Left-click a workspace number: still switches workspace.
+5. Left-click the gear: still opens the settings panel.
 
-Overview 打开后应看到 `quickshell:overview` layer，关闭后该 layer 应消失，
-`omarchy-bar` 应保持存在。
+While Overview is open the `quickshell:overview` layer must be present; after it
+closes that layer must disappear and `omarchy-bar` must remain.
 
-## 5. 稳定性回归
+## 5. Stability regression
 
-对于涉及 Shell、快捷键、插件生命周期或 bar widget 的改动，至少执行 3 次；
-涉及热重载、IPC 或卡死问题时执行 5 次：
+For changes that touch the Shell, keybindings, plugin lifecycle, or the bar
+widget, run at least 3 cycles; for hot reload, IPC, or hang issues, run 5:
 
 ```sh
 for n in 1 2 3 4 5; do
@@ -103,8 +108,9 @@ for n in 1 2 3 4 5; do
 done
 ```
 
-每次循环都应成功。循环之间保留 1 秒以上间隔，避免把 Shell 启动竞争误判为
-插件故障。完成后再等待约 30 秒，确认 ping 仍返回 `ok`，并检查最近日志：
+Every cycle must succeed. Keep at least 1 second between cycles so a Shell
+startup race is not mistaken for a plugin failure. Afterwards wait about 30
+seconds, confirm ping still returns `ok`, and check recent logs:
 
 ```sh
 journalctl --user -b --since '3 min ago' --no-pager \
@@ -112,13 +118,14 @@ journalctl --user -b --since '3 min ago' --no-pager \
   | tail -n 160
 ```
 
-重点关注 `fatal`、`segfault`、`is not responding`、重复的 Shell 启动/退出，
-以及持续刷屏的同一条 QML 错误。普通图标缺失和 portal 注册 warning 通常不是
-插件故障，但应记录而不能冒充“全部无 warning”。
+Look for `fatal`, `segfault`, `is not responding`, repeated Shell start/exit
+cycles, and the same QML error flooding the log. Missing icons and portal
+registration warnings are usually not plugin failures, but record them rather
+than claiming there were no warnings at all.
 
-## 6. 卡死时的隔离流程
+## 6. Isolating a hang
 
-如果 top bar 和 Overview 同时无响应，先保留现场并执行：
+If the top bar and Overview are both unresponsive, preserve the state and run:
 
 ```sh
 pgrep -af 'quickshell|omarchy-launch-shell'
@@ -128,36 +135,39 @@ free -h
 df -h
 ```
 
-如果 Hyprland 正常但 Shell IPC 无响应，说明故障在 Quickshell/Shell 层，不是
-整机资源耗尽。可用 Omarchy 的正常流程尝试恢复：
+If Hyprland works but Shell IPC does not answer, the fault is in the
+Quickshell/Shell layer, not system-wide resource exhaustion. Try Omarchy's normal
+recovery first:
 
 ```sh
 timeout 35s omarchy restart shell
 ```
 
-如果 Shell 已经忙循环而该命令无法完成，最后手段是只终止当前 Quickshell 子进程，
-让 `omarchy-launch-shell` 重新拉起它；不要终止 Hyprland，也不要使用
-`hyprctl reload` 代替 Shell 重启。恢复后必须重新执行第 3、4、5 节。
+If the Shell is busy-looping and that command cannot finish, the last resort is
+to terminate only the current Quickshell child process and let
+`omarchy-launch-shell` relaunch it. Do not kill Hyprland, and do not use
+`hyprctl reload` in place of a Shell restart. After recovery, repeat sections 3,
+4, and 5.
 
-为确认是否是 overview 导致，可暂时执行：
+To confirm whether the overview plugin is the cause, temporarily run:
 
 ```sh
 omarchy plugin disable hancore.overview-workspaces
 timeout 35s omarchy restart shell
 ```
 
-隔离测试结束后务必恢复：
+Always restore it once isolation testing is done:
 
 ```sh
 omarchy plugin enable hancore.overview-workspaces left
 timeout 35s omarchy restart shell
 ```
 
-## 7. 提交前清单
+## 7. Pre-commit checklist
 
-- 自动测试、插件校验和 `git diff --check` 通过。
-- 没有新增 `hyprctl reload`。
-- 手动右键/左键行为符合第 4 节。
-- Shell ping 返回 `ok`，bar 和 overview layer 正常出现/消失。
-- 稳定性循环完成，日志没有新的 fatal/QML 错误。
-- 只提交 overview 仓库自己的文件；确认 `git status` 后再 commit。
+- Automated tests, plugin validation, and `git diff --check` pass.
+- No new `hyprctl reload`.
+- Manual right-click/left-click behavior matches section 4.
+- Shell ping returns `ok`; the bar and overview layers appear and disappear correctly.
+- The stability cycles completed and the logs show no new fatal or QML errors.
+- Only this repository's files are committed; check `git status` before committing.
