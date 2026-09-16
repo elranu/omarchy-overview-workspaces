@@ -11,6 +11,9 @@
 - Workspace ordering is now a single **Occupied workspaces only** on/off toggle.
   The stored `sortMode` values are unchanged.
 - Removed the Chinese and Japanese documentation; the repository is English-only.
+- New previews and demo recordings made for Panorama on a two-monitor setup,
+  replacing the original plugin's screenshots. The README now documents
+  requirements and removal.
 
 ## 0.1.10
 

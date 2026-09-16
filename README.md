@@ -1,27 +1,20 @@
 # Panorama
 
-![Overview after pressing Win](preview.png)
+![Panorama open on two monitors](preview.png)
 
-*Press Win/Super to open the Overview.*
+*Press Win/Super to open the Overview on every monitor.*
 
-![Overview while moving a window](preview-move.png)
+![Dragging windows between monitors](docs/media/drag-between-monitors.gif)
 
-*Click and drag windows inside Overview to move them between workspaces.*
+*Drag windows between workspaces, including onto another monitor.*
+
+![Keyboard navigation and search](docs/media/keyboard-and-search.gif)
+
+*Navigate with the arrow keys and type to search apps, open windows, and Omarchy menu actions.*
 
 Panorama is a multi-monitor workspace overview for Omarchy. It provides a full-screen overview on every monitor with live window previews, wallpaper-backed workspace cards, MRU workspace ordering, drag-and-drop between workspaces and monitors, search, and automatic keyboard integration.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
-
-## Credits
-
-Panorama is a fork of
-[iamcheyan/omarchy-overview-workspaces](https://github.com/iamcheyan/omarchy-overview-workspaces)
-(Overview Workspaces, by HANCORE), which is published separately in the Omarchy
-plugin marketplace. Panorama adds multi-monitor support, such as dragging windows
-between monitors, and follows its own release line. Both are MIT licensed.
-
-Panorama and Overview Workspaces take over the same Win/Super bindings, so enable
-only one of them at a time.
 
 ## Features
 
@@ -46,10 +39,21 @@ only one of them at a time.
 - Omarchy theme colors and configured icon font.
 - No generic fallback icon is drawn over a window thumbnail when an app has no icon.
 
+## Requirements
+
+- Omarchy 4 (Hyprland with Lua configuration and the Omarchy Quickshell shell).
+- Everything else it calls ships with Omarchy: `hyprctl`, `uwsm-app` and
+  `gtk-launch` to launch applications from search, and `xdg-terminal-exec` for
+  `>command` searches.
+
+Panorama needs no root privileges, installs no services, downloads nothing,
+and never edits your Hyprland configuration files. Its bindings exist only at
+runtime and are removed when the plugin is disabled.
+
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --enable
+omarchy plugin add https://github.com/elranu/omarchy-panorama.git --enable
 ```
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
@@ -62,13 +66,13 @@ the same Win/Super bindings. Remove the original first, then add Panorama:
 
 ```sh
 omarchy plugin remove hancore.overview-workspaces
-omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --enable
+omarchy plugin add https://github.com/elranu/omarchy-panorama.git --enable
 omarchy restart shell
 ```
 
 Settings from the gear panel start from their defaults. To keep the learned
-workspace order, move `~/.local/state/omarchy-overview-workspaces` to
-`~/.local/state/omarchy-panorama` before restarting the shell.
+workspace order, move `omarchy-overview-workspaces` to `omarchy-panorama` inside
+`${XDG_STATE_HOME:-$HOME/.local/state}` before restarting the shell.
 
 If you run a local copy of this repository under the old id instead, rename its
 folder in `~/.config/omarchy/plugins/` to `ranu.panorama`, change the bar entry id
@@ -86,6 +90,17 @@ A plugin rescan alone does not replace that service instance. Do not use a
 Hyprland reload as a substitute.
 
 Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Older hosts that injected the full shell configuration also retain the legacy duplicate-layout cleanup.
+
+## Remove
+
+```sh
+omarchy plugin remove ranu.panorama
+omarchy restart shell
+```
+
+Removing the plugin unregisters its runtime bindings and restores Omarchy's
+native workspace indicator and workspace shortcuts. Optionally delete its saved
+workspace order with `rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-panorama"`.
 
 ## Workspace ordering
 
@@ -165,3 +180,14 @@ qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
 node --test
 ```
+
+## Credits
+
+Panorama is a fork of
+[iamcheyan/omarchy-overview-workspaces](https://github.com/iamcheyan/omarchy-overview-workspaces)
+(Overview Workspaces, by HANCORE), which is published separately in the Omarchy
+plugin marketplace. Panorama adds multi-monitor support, such as dragging windows
+between monitors, and follows its own release line. Both are MIT licensed.
+
+Panorama and Overview Workspaces take over the same Win/Super bindings, so enable
+only one of them at a time.
