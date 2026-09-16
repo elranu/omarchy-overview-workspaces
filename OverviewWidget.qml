@@ -1273,6 +1273,10 @@ Item {
                                 GlobalStates.overviewOpen = false;
                                 event.accepted = true;
                             } else if (event.button === Qt.MiddleButton) {
+                                // Clicking a window lets go of a carried one, and a
+                                // window on its way out must not be picked up by the
+                                // next Shift move either.
+                                GlobalStates.overviewCarriedWindowAddress = ""
                                 Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
                                 event.accepted = true
                             }
@@ -1318,6 +1322,8 @@ Item {
                             acceptedButtons: Qt.LeftButton
                             cursorShape: Qt.PointingHandCursor
                             onClicked: event => {
+                                // Same release as the middle click above.
+                                GlobalStates.overviewCarriedWindowAddress = ""
                                 if (window.windowData?.address)
                                     Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
                                 event.accepted = true
