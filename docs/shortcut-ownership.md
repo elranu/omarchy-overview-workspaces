@@ -43,11 +43,15 @@ user bindings just to recognize combinations.
 ## Enable, disable, and reload
 
 The Win, Win+Tab, and Win+number bindings the plugin takes over exist only in
-Hyprland's runtime state. When the plugin is disabled or destroyed, it must use
-`hyprctl eval` to remove exactly its own bindings and restore the user bindings
-it saved before taking over. **Never call `hyprctl reload`**, and never restore
-by hard-coding Omarchy's default commands: the former reloads all of Hyprland,
-the latter loses the user's custom commands and options.
+Hyprland's runtime state. When the plugin is disabled or destroyed, it uses a
+single `hyprctl eval` to remove exactly its own bindings and then reinstalls
+Omarchy's native Win+Tab and Win+Shift+Tab bindings, plus the native Win+number
+bindings when optimized ordering was active. **Never call `hyprctl reload`** for
+this: it reloads all of Hyprland.
+
+The plugin does not save the user's previous bindings, so a custom user mapping
+on one of those chords is replaced by Omarchy's native command on teardown. A
+Hyprland config reload brings the user's own mapping back.
 
 Hyprland's `hl.unbind("...")` does not track where a binding came from and can
 remove user bindings. Only use it on chords the plugin explicitly owns; never on

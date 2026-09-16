@@ -13,11 +13,11 @@
   Omarchy 4 by using its capability-scoped `barConfig` API.
 - Kept compatibility with older Omarchy hosts without requesting access to the
   full shell configuration.
-- Remove the raw Super-key listener when the plugin service is disabled or
+- Removed the raw Super-key listener when the plugin service is disabled or
   destroyed, so no Overview event observer remains behind.
-- Restore native Win+number bindings when changing from optimized ordering to
+- Restored native Win+number bindings when changing from optimized ordering to
   system ordering, preventing stale Overview slots after a later disable.
-- Document the required Shell restart after updating an existing enabled copy;
+- Documented the required Shell restart after updating an existing enabled copy;
   Omarchy intentionally preserves `keepLoaded` services during plugin rescans.
 
 ## 0.1.8
