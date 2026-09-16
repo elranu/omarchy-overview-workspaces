@@ -833,6 +833,11 @@ Item {
                                 root.hoveredWorkspaceEntry = null;
                         }
                         onPressed: {
+                            // While force-kill is armed a click is aimed at a
+                            // window; landing on a card must not switch to or
+                            // create a workspace and close the overview.
+                            if (GlobalStates.overviewKillMode)
+                                return;
                             if (GlobalStates.overviewDraggingTargetWorkspace === -1) {
                                 if (workspace.isTrailingEmpty) {
                                     if (workspace.monitorName.length > 0)
@@ -1103,10 +1108,16 @@ Item {
                         onClicked: (event) => {
                             if (!window.windowData) return;
 
-                            if (GlobalStates.overviewKillMode && event.button === Qt.LeftButton) {
-                                Hyprland.dispatch(`hl.dsp.window.kill({window = "address:${window.windowData.address}"})`)
-                                GlobalStates.overviewKillMode = false;
-                                GlobalStates.overviewOpen = false;
+                            if (GlobalStates.overviewKillMode) {
+                                // The explicit left click is the only destructive
+                                // action while armed. Anything else -- notably a
+                                // middle click, which normally closes the window --
+                                // is swallowed rather than falling through.
+                                if (event.button === Qt.LeftButton) {
+                                    Hyprland.dispatch(`hl.dsp.window.kill({window = "address:${window.windowData.address}"})`)
+                                    GlobalStates.overviewKillMode = false;
+                                    GlobalStates.overviewOpen = false;
+                                }
                                 event.accepted = true;
                                 return;
                             }

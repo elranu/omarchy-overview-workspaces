@@ -72,9 +72,9 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 - Empty workspaces remain visible when using native ordering.
 - A New workspace card always stays at the end of each monitor's list.
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
-- Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor becomes a
-  crosshair, and clicking a window kills only that client. Press `Escape` or
-  right-click to cancel without killing anything.
+- Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor is hidden
+  and a close icon (`󰅖`) follows the pointer, and clicking a window kills only
+  that client. Press `Escape` or right-click to cancel without killing anything.
 - Keyboard navigation with arrows, H/J/K/L, Tab, Enter, Space, and Escape.
 - Windows-style MRU ordering for workspaces across Overview, the top bar,
   Win+number, Win+Tab, and Win+Shift+Tab.

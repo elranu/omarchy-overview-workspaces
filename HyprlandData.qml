@@ -340,7 +340,12 @@ Singleton {
             orderedWindows = [];
             const consumed = {};
             for (const id of mru) {
-                if (byId[id] && !consumed[id]) {
+                // System order puts placeholders for empty native slots, and a
+                // workspace can empty out while still in the MRU list. Only
+                // occupied ones are promoted; the rest keep their visual position
+                // below, which is what the bar widget already does.
+                if (byId[id] && !consumed[id]
+                        && (byId[id].isPendingOccupied || root.workspaceHasVisibleWindows(id))) {
                     orderedWindows.push(byId[id]);
                     consumed[id] = true;
                 }
