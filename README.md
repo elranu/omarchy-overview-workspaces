@@ -1,5 +1,32 @@
 # Overview Workspaces
 
+## 0.1.10
+
+- Use one Windows-style MRU order for the Overview grid, top-bar workspace
+  buttons, Win+number navigation, and Win+Tab switching. Occupied workspaces
+  move to the front when focused; empty/native slots and the New workspace card
+  remain outside MRU and stay after occupied workspaces.
+
+## 0.1.9
+
+- Restored automatic Win/Super, Win+Tab, and optimized Win+number bindings on
+  Omarchy 4 by using its capability-scoped `barConfig` API.
+- Kept compatibility with older Omarchy hosts without requesting access to the
+  full shell configuration.
+- Remove the raw Super-key listener when the plugin service is disabled or
+  destroyed, so no Overview event observer remains behind.
+- Restore native Win+number bindings when changing from optimized ordering to
+  system ordering, preventing stale Overview slots after a later disable.
+- Document the required Shell restart after updating an existing enabled copy;
+  Omarchy intentionally preserves `keepLoaded` services during plugin rescans.
+
+## 0.1.8
+
+- Added a guarded force-kill mode to Overview: press `Ctrl+Shift+X`, then click
+  a window to terminate only that client by address.
+- The mode hides the themed system cursor and shows the JetBrainsMono Nerd Font
+  close glyph `󰅖` next to the pointer. `Escape` or right-click cancels safely.
+
 ## 0.1.7
 
 - System-native mode keeps Omarchy's Win+1…0 workspace binds instead of
@@ -33,7 +60,7 @@ Overview Workspaces is an Omarchy Quattro experience-enhancement plugin. It prov
 ## Marketplace
 
 Overview Workspaces has been approved and verified in the Omarchy plugin marketplace:
-[open the published marketplace page](https://omarchyplugins.com/plugin.html?id=hancore.overview-workspaces).
+[open the published marketplace page](https://plugins.omarchy.org/plugin.html?id=hancore.overview-workspaces).
 
 ## English
 
@@ -45,10 +72,16 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 - Empty workspaces remain visible when using native ordering.
 - A New workspace card always stays at the end of each monitor's list.
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
+- Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor becomes a
+  crosshair, and clicking a window kills only that client. Press `Escape` or
+  right-click to cancel without killing anything.
 - Keyboard navigation with arrows, H/J/K/L, Tab, Enter, Space, and Escape.
-- MRU workspace switching with Win+Tab and Win+Shift+Tab.
+- Windows-style MRU ordering for workspaces across Overview, the top bar,
+  Win+number, Win+Tab, and Win+Shift+Tab.
 - Search for applications, open windows, and Omarchy menu actions from Overview.
 - Per-monitor workspace previews, configurable from the gear panel.
+- Right-click any part of the top-bar workspace widget to open Overview as a
+  mouse fallback when the keyboard shortcut is unavailable.
 - Re-registers its runtime bindings after a Hyprland configuration reload.
 - Omarchy theme colors and configured icon font.
 - No generic fallback icon is drawn over a window thumbnail when an app has no icon.
@@ -61,22 +94,32 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
 
-Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Existing layouts containing both indicators are cleaned up automatically when the plugin loads.
+After updating an existing enabled installation, restart Omarchy Shell once so
+the new keybinding service code replaces the preserved `keepLoaded` instance:
+
+```sh
+omarchy restart shell
+```
+
+A plugin rescan alone does not replace that service instance. Do not use a
+Hyprland reload as a substitute.
+
+Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Older hosts that injected the full shell configuration also retain the legacy duplicate-layout cleanup.
 
 ### Ordering modes
 
 Open the gear button in the top bar to choose a mode.
 
-**Optimized order (recommended)**
+**Occupied workspaces only**
 
-- Workspaces with windows receive dynamic visual slots `1, 2, 3...`.
+- Workspaces with windows are displayed in Windows-style MRU order.
 - Win+1 through Win+0 follow those visual slots.
 - The New workspace card always stays last.
 - The top bar and Overview use the same order.
 
 **System native order**
 
-- Mirrors Omarchy's native workspace IDs.
+- Keeps occupied workspaces in MRU order while also showing native empty slots.
 - Empty workspaces 1–10 remain visible.
 - Existing workspaces 11, 12, 13, and higher remain visible.
 - Native IDs are not renumbered.
@@ -103,10 +146,12 @@ assume `/usr/share/omarchy` and can be used on NixOS installations.
 
 The enabled plugin service registers standalone Win, Win+Tab, Win+Shift+Tab, optimized Win+number slots, and Super-interrupt guards for normal application shortcuts.
 
-When the plugin is disabled or removed, the service removes only the runtime
-bindings it owns and restores native workspace navigation and Super+mouse
-move/resize. It never runs `hyprctl reload` or writes runtime binds into the
-user's Hyprland configuration.
+When the plugin is disabled or removed, the service removes the fixed shortcut
+chords it manages and restores Omarchy's default workspace navigation and
+Super+mouse move/resize. Hyprland's runtime unbind API has no plugin-owner
+identity, so a custom user mapping on the same chord cannot be preserved by
+this cleanup. The service never runs `hyprctl reload` or writes runtime binds
+into the user's Hyprland configuration.
 
 ### Manual summon and diagnostics
 
@@ -130,12 +175,17 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 
 ### Validation
 
+The complete repeatable validation procedure is documented in
+[`docs/validation.md`](docs/validation.md). It covers automated tests, plugin
+validation, QML checks, Shell IPC, layer checks, mouse fallback behavior,
+stability cycles, and recovery isolation.
+
 ```sh
 omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```
 
 ---
@@ -155,9 +205,10 @@ Overview Workspaces 是一个用于 Omarchy Quattro 的体验增强插件。它�
 - 每个显示器的最后始终保留一个“新工作区”。
 - 支持鼠标选择、窗口聚焦、窗口拖拽和多显示器布局。
 - 支持方向键、H/J/K/L、Tab、Enter、Space、Escape。
-- 使用 Win+Tab 和 Win+Shift+Tab 按 MRU 顺序切换工作区。
+- Overview、顶栏、Win+数字、Win+Tab 和 Win+Shift+Tab 都按 Windows 式 MRU 顺序排列工作区；空工作区和新工作区不参与 MRU，并保持在后面。
 - 可以在 Overview 中搜索应用、已打开的窗口和 Omarchy 菜单操作。
 - 支持按显示器隔离工作区预览，并可在齿轮面板中配置。
+- 右键点击顶栏工作区区域的任意位置都可以打开 Overview，作为快捷键失效时的鼠标回退入口。
 - Hyprland 配置 reload 后会自动重新注册运行时快捷键。
 - 使用 Omarchy 主题颜色和配置的图标字体。
 - 应用没有图标时，不会在窗口缩略图上覆盖通用图标。
@@ -170,7 +221,16 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 启用后插件会自动注册 Hyprland 快捷键，用户不需要手动修改 `~/.config/hypr/bindings.lua`。
 
-启用时会自动替换原生工作区指示器，禁用时由 Omarchy 恢复原生组件。旧配置若同时包含两种指示器，插件加载后会自动清理重复项。
+如果是更新已经启用的旧版本，请在更新后重启一次 Omarchy Shell，让新的快捷键
+service替换Omarchy在插件rescan期间保留的`keepLoaded`旧实例：
+
+```sh
+omarchy restart shell
+```
+
+只执行插件rescan不会替换这个service实例；不要用Hyprland reload代替。
+
+启用时会自动替换原生工作区指示器，禁用时由 Omarchy 恢复原生组件。仍注入完整 Shell 配置的旧版 Omarchy 会继续执行旧布局的重复项清理。
 
 ### 排序模式
 
@@ -210,9 +270,10 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 插件启用后，service 会自动注册单独 Win、Win+Tab、Win+Shift+Tab、优化模式的 Win+数字，以及防止普通应用快捷键误触发 Overview 的拦截绑定。
 
-插件禁用或卸载时，service 只删除自己拥有的运行时绑定，并恢复工作区及
-Super+鼠标移动/缩放绑定。不会执行 `hyprctl reload`，也不会把运行时绑定
-写入用户的 Hyprland 配置文件。
+插件禁用或卸载时，service会删除自己管理的固定快捷键组合，并恢复Omarchy默认的
+工作区及Super+鼠标移动/缩放绑定。Hyprland的运行时unbind API没有“插件所有者”
+标识，因此如果用户在相同组合键上设有自定义映射，清理时无法保留该映射。
+service不会执行`hyprctl reload`，也不会把运行时绑定写入用户的Hyprland配置文件。
 
 ### 手动启动和诊断
 
@@ -236,12 +297,16 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 
 ### 验证
 
+每次修改后的完整验收流程见
+[`docs/validation.md`](docs/validation.md)，包括自动测试、插件校验、QML 检查、
+Shell IPC、bar/Overview layer、右键鼠标回退、稳定性循环和卡死隔离恢复流程。
+
 ```sh
 omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```
 
 ---
@@ -261,9 +326,10 @@ Overview Workspaces は Omarchy Quattro の操作体験を強化するプラグ�
 - 各モニターの最後に常に「新しいワークスペース」を表示。
 - マウス選択、ウィンドウのフォーカス、ドラッグ、マルチモニターに対応。
 - 矢印キー、H/J/K/L、Tab、Enter、Space、Escape に対応。
-- Win+Tab と Win+Shift+Tab による MRU 切り替え。
+- Overview、トップバー、Win+数字、Win+Tab、Win+Shift+Tab のすべてで Windows 風の MRU 順にワークスペースを表示。空のワークスペースと新しいワークスペースは MRU の対象外で後ろに残ります。
 - Overview からアプリ、開いているウィンドウ、Omarchy メニュー操作を検索。
 - モニターごとのワークスペースプレビューに対応し、歯車パネルで設定可能。
+- トップバーのワークスペース領域を右クリックすると、キーボードショートカットの代替として Overview を開けます。
 - Hyprland の設定 reload 後に実行時ショートカットを自動再登録。
 - Omarchy のテーマカラーと設定済みアイコンフォントを使用。
 - アプリアイコンがない場合、サムネイル上に汎用アイコンを表示しない。
@@ -276,7 +342,17 @@ omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git 
 
 有効化後、Hyprland のショートカットは自動登録されます。`~/.config/hypr/bindings.lua` を手動編集する必要はありません。
 
-有効化すると標準のワークスペース表示を自動的に置き換え、無効化すると Omarchy が標準表示を復元します。既存の設定で両方が表示されている場合も、プラグインの読み込み時に重複を自動的に解消します。
+有効化済みの旧バージョンを更新した場合は、更新後にOmarchy Shellを一度再起動し、
+プラグインのrescan中も保持される古い`keepLoaded`サービスを新しいコードに置き換えてください。
+
+```sh
+omarchy restart shell
+```
+
+プラグインのrescanだけではこのサービスは置き換わりません。代わりにHyprlandの
+reloadを使用しないでください。
+
+有効化すると標準のワークスペース表示を自動的に置き換え、無効化すると Omarchy が標準表示を復元します。完全な Shell 設定を注入する旧版 Omarchy では、従来どおり既存レイアウトの重複も整理します。
 
 ### 並び順モード
 
@@ -318,10 +394,11 @@ navigation** をオフにします。クエリの先頭に `>` を付けると�
 
 有効化中、service が Win 単独、Win+Tab、Win+Shift+Tab、最適化モードの Win+数字、および通常のアプリショートカットとの競合を防ぐ割り込みバインドを自動登録します。
 
-プラグインを無効化または削除すると、service は自分が所有する実行時
-バインドだけを削除し、置き換えていたワークスペース用キーと Super+マウスの
-移動/リサイズを復元します。`hyprctl reload` は実行せず、実行時バインドを
-設定ファイルへ書き込みません。
+プラグインを無効化または削除すると、serviceは管理対象の固定ショートカットを
+削除し、Omarchy標準のワークスペース操作とSuper+マウスの移動/リサイズを
+復元します。Hyprlandの実行時unbind APIにはプラグイン所有者の識別子がないため、
+同じキーに設定されたユーザー独自の割り当ては保持できません。serviceは
+`hyprctl reload`を実行せず、実行時バインドを設定ファイルへ書き込みません。
 
 ### 手動起動と診断
 
@@ -345,10 +422,13 @@ omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspace
 
 ### 検証
 
+自動テスト、プラグイン検証、QML、Shell IPC、layer、マウス操作、安定性確認を
+含む完全な手順は [`docs/validation.md`](docs/validation.md) にまとめています。
+
 ```sh
 omarchy plugin validate .
 qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" \
   Overview.qml OverviewWidget.qml OverviewWindow.qml \
   SettingsPanel.qml KeybindingService.qml bar/widget.qml
-node --test tests/menu-index.test.js
+node --test
 ```

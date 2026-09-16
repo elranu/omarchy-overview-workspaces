@@ -110,7 +110,7 @@ Scope {
 
         let entries = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
         if (entries.length === 0)
-            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal();
+            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal(true);
 
         const entry = entries[slot - 1];
         if (!entry)
@@ -276,7 +276,14 @@ Scope {
                 // Click scrim to close
                 MouseArea {
                     anchors.fill: parent
+                    cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     onClicked: {
+                        if (GlobalStates.overviewKillMode && mouse.button === Qt.RightButton) {
+                            GlobalStates.overviewKillMode = false;
+                            mouse.accepted = true;
+                            return;
+                        }
                         if (GlobalStates.overviewSearchMode) {
                             GlobalStates.overviewSearchMode = false;
                             overviewScope.overviewFilterQuery = "";
@@ -295,6 +302,11 @@ Scope {
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) {
+                        if (GlobalStates.overviewKillMode) {
+                            GlobalStates.overviewKillMode = false;
+                            event.accepted = true;
+                            return;
+                        }
                         if (GlobalStates.overviewSearchMode) {
                             GlobalStates.overviewSearchMode = false;
                             overviewScope.overviewFilterQuery = "";
@@ -302,6 +314,13 @@ Scope {
                             return;
                         }
                         GlobalStates.overviewOpen = false;
+                        event.accepted = true;
+                        return;
+                    }
+                    if (event.key === Qt.Key_X
+                        && (event.modifiers & Qt.ControlModifier)
+                        && (event.modifiers & Qt.ShiftModifier)) {
+                        GlobalStates.overviewKillMode = true;
                         event.accepted = true;
                         return;
                     }
@@ -405,8 +424,10 @@ Scope {
 
                 Connections {
                     target: GlobalStates
-                    function onOverviewOpenChanged() {
-                        if (!GlobalStates.overviewOpen) {
+                function onOverviewOpenChanged() {
+                    if (!GlobalStates.overviewOpen)
+                        GlobalStates.overviewKillMode = false;
+                    if (!GlobalStates.overviewOpen) {
                             GlobalStates.overviewSearchMode = false;
                             overviewScope.overviewFilterQuery = "";
                         }
