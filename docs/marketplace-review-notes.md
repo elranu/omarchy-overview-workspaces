@@ -1,17 +1,19 @@
 # Marketplace review notes
 
-> Compiled 2026-08-22 from the review of this plugin's original submission,
+> Compiled 2026-08-22 from the review of the original plugin's submission,
 > [#1401](https://github.com/omacom/omarchy-plugin-marketplace/issues/1401), and
 > of sibling plugins #1468 and #1428. Use it as a self-check before submitting
 > and when responding to a re-review.
 
-## Published status
+## Original plugin status
 
-The plugin was approved and verified, and is now published at:
+Panorama is a fork of Overview Workspaces. The original plugin was approved and
+verified, and is published at:
 https://plugins.omarchy.org/plugin.html?id=hancore.overview-workspaces
 
 The marketplace verification applies to the published snapshot and is not a
-security audit.
+security audit, and it does not carry over to this fork: Panorama is reviewed as
+its own listing.
 
 ## 1. How marketplace review works
 

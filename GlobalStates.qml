@@ -163,12 +163,12 @@ Singleton {
             if (event?.name !== "custom")
                 return;
             const data = event.data ?? "";
-            if (data === "hancore-overview-super,down") {
+            if (data === "panorama-super,down") {
                 root.superDown = true;
                 root.superReleaseMightTrigger = true;
-            } else if (data === "hancore-overview-super,interrupt") {
+            } else if (data === "panorama-super,interrupt") {
                 root.superReleaseMightTrigger = false;
-            } else if (data === "hancore-overview-super,tap" || data === "hancore-overview-super,up") {
+            } else if (data === "panorama-super,tap" || data === "panorama-super,up") {
                 const grabbed = root.overviewSwitchingController?.grabbed ?? false;
                 root.superDown = false;
                 if (grabbed) {

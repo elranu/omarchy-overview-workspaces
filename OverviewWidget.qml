@@ -551,9 +551,9 @@ Item {
             const r = WheelUtils.getSteps(wheel.angleDelta.y, root.wheelAccum)
             root.wheelAccum = r.accumulator
             if (r.steps > 0)
-                Hyprland.dispatch("hl.dsp.global('quickshell:overviewPrev')")
+                Hyprland.dispatch("hl.dsp.global('quickshell:panoramaPrev')")
             else if (r.steps < 0)
-                Hyprland.dispatch("hl.dsp.global('quickshell:overviewNext')")
+                Hyprland.dispatch("hl.dsp.global('quickshell:panoramaNext')")
             wheel.accepted = true
         }
     }

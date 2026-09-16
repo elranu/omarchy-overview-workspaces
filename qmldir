@@ -1,4 +1,4 @@
-module hancore.overview.workspaces
+module ranu.panorama
 singleton AppSearch 1.0 AppSearch.qml
 singleton MenuSearch 1.0 MenuSearch.qml
 singleton Appearance 1.0 Appearance.qml

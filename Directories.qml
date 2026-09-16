@@ -4,5 +4,5 @@ import Quickshell
 
 QtObject {
     readonly property string home: Quickshell.env("HOME") || ""
-    readonly property string stateHome: `${Quickshell.env("XDG_STATE_HOME") || home + "/.local/state"}/omarchy-overview-workspaces`
+    readonly property string stateHome: `${Quickshell.env("XDG_STATE_HOME") || home + "/.local/state"}/omarchy-panorama`
 }

@@ -126,7 +126,7 @@ Singleton {
         // reason why. The likely cause is OMARCHY_PATH not reaching the shell
         // process, which matters on any install that is not under /usr/share.
         onLoadFailed: {
-            console.warn("hancore.overview-workspaces: no menu definition at "
+            console.warn("ranu.panorama: no menu definition at "
                 + root.defaultPath + " (OMARCHY_PATH="
                 + (Quickshell.env("OMARCHY_PATH") || "unset")
                 + ") -- command menu results will be unavailable");

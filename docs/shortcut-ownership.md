@@ -2,7 +2,7 @@
 
 ## What the plugin owns
 
-When `hancore.overview-workspaces` is enabled, the plugin is responsible only for:
+When `ranu.panorama` is enabled, the plugin is responsible only for:
 
 - standalone Win: open or close the workspace Overview;
 - Win+Tab and Win+Shift+Tab: cycle workspaces in Overview;

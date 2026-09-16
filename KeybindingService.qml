@@ -61,7 +61,7 @@ Item {
             const keycode = slot + 9;
             commands.push(`hl.unbind("SUPER + code:${keycode}")`);
             if (optimized) {
-                commands.push(`hl.bind("SUPER + code:${keycode}", hl.dsp.global("quickshell:workspaceSlot${slot}"), { description = "Overview workspace slot ${slot}" })`);
+                commands.push(`hl.bind("SUPER + code:${keycode}", hl.dsp.global("quickshell:panoramaSlot${slot}"), { description = "Overview workspace slot ${slot}" })`);
             } else {
                 commands.push(`hl.bind("SUPER + code:${keycode}", hl.dsp.focus({ workspace = "${slot}" }), { description = "Switch to workspace ${slot}" })`);
             }
@@ -85,17 +85,17 @@ Item {
             'hl.unbind("SUPER + TAB")',
             'hl.unbind("SUPER + SHIFT + TAB")'
         ];
-        commands.push('if _G.hancoreOverviewSuperListener then _G.hancoreOverviewSuperListener:remove() end');
-        commands.push('_G.hancoreOverviewSuperDown = _G.hancoreOverviewSuperDown or {}');
-        commands.push('_G.hancoreOverviewSuperListener = hl.on("input.keyboard.key", function(code, time, state) local isSuper = code == 133 or code == 134; if state == 1 then if isSuper then _G.hancoreOverviewSuperDown[code] = true; local other = false; for k,v in pairs(_G.hancoreOverviewSuperDown) do if k ~= code and v then other = true end end; hl.dispatch(hl.dsp.event("hancore-overview-super," .. (other and "interrupt" or "down"))) else local any = false; for k,v in pairs(_G.hancoreOverviewSuperDown) do if v then any = true end end; if any then hl.dispatch(hl.dsp.event("hancore-overview-super,interrupt")) end end else if isSuper and _G.hancoreOverviewSuperDown[code] then _G.hancoreOverviewSuperDown[code] = nil; local any = false; for k,v in pairs(_G.hancoreOverviewSuperDown) do if v then any = true end end; hl.dispatch(hl.dsp.event("hancore-overview-super," .. (any and "up" or "tap"))) end end end)');
+        commands.push('if _G.panoramaSuperListener then _G.panoramaSuperListener:remove() end');
+        commands.push('_G.panoramaSuperDown = _G.panoramaSuperDown or {}');
+        commands.push('_G.panoramaSuperListener = hl.on("input.keyboard.key", function(code, time, state) local isSuper = code == 133 or code == 134; if state == 1 then if isSuper then _G.panoramaSuperDown[code] = true; local other = false; for k,v in pairs(_G.panoramaSuperDown) do if k ~= code and v then other = true end end; hl.dispatch(hl.dsp.event("panorama-super," .. (other and "interrupt" or "down"))) else local any = false; for k,v in pairs(_G.panoramaSuperDown) do if v then any = true end end; if any then hl.dispatch(hl.dsp.event("panorama-super,interrupt")) end end else if isSuper and _G.panoramaSuperDown[code] then _G.panoramaSuperDown[code] = nil; local any = false; for k,v in pairs(_G.panoramaSuperDown) do if v then any = true end end; hl.dispatch(hl.dsp.event("panorama-super," .. (any and "up" or "tap"))) end end end)');
         commands.push('hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"), { non_consuming = true, transparent = true, description = "Overview Super state" })');
         commands.push('hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"), { non_consuming = true, transparent = true, description = "Overview Super state" })');
         commands.push('hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"), { non_consuming = true, transparent = true, release = true, description = "Overview Super state" })');
         commands.push('hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"), { non_consuming = true, transparent = true, release = true, description = "Overview Super state" })');
-        commands.push('hl.bind("SUPER + TAB", hl.dsp.global("quickshell:overviewNext"), { description = "Overview workspace next" })');
-        commands.push('hl.bind("SUPER + SHIFT + TAB", hl.dsp.global("quickshell:overviewPrev"), { description = "Overview workspace previous" })');
-        commands.push('hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:overviewCommit"), { release = true, description = "Overview workspace commit" })');
-        commands.push('hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:overviewCommit"), { release = true, description = "Overview workspace commit" })');
+        commands.push('hl.bind("SUPER + TAB", hl.dsp.global("quickshell:panoramaNext"), { description = "Overview workspace next" })');
+        commands.push('hl.bind("SUPER + SHIFT + TAB", hl.dsp.global("quickshell:panoramaPrev"), { description = "Overview workspace previous" })');
+        commands.push('hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:panoramaCommit"), { release = true, description = "Overview workspace commit" })');
+        commands.push('hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:panoramaCommit"), { release = true, description = "Overview workspace commit" })');
         // Native mode does not own Win+number. Never unbind or recreate those
         // keys there; they may be user-defined rather than Omarchy defaults.
         return optimized
@@ -139,8 +139,8 @@ Item {
             return;
         root.restoring = true;
         const commands = [
-            'if _G.hancoreOverviewSuperListener then _G.hancoreOverviewSuperListener:remove(); _G.hancoreOverviewSuperListener = nil end',
-            '_G.hancoreOverviewSuperDown = nil',
+            'if _G.panoramaSuperListener then _G.panoramaSuperListener:remove(); _G.panoramaSuperListener = nil end',
+            '_G.panoramaSuperDown = nil',
             'hl.unbind("SUPER_L")',
             'hl.unbind("SUPER_R")',
             'hl.unbind("SUPER + SUPER_L")',

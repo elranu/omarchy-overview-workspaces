@@ -8,7 +8,7 @@ import ".." as Local
 
 BarWidget {
     id: root
-    moduleName: "hancore.overview-workspaces"
+    moduleName: "ranu.panorama"
 
     readonly property bool opened: settingsPanelLoader.item
         ? settingsPanelLoader.item.opened === true

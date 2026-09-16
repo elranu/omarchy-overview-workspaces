@@ -5,7 +5,7 @@ function removeDuplicateNativeWidget(config) {
     const sections = ["left", "center", "right"];
     const id = entry => typeof entry === "string" ? entry : entry?.id;
     if (!sections.some(section => (layout?.[section] ?? []).some(
-            entry => id(entry) === "hancore.overview-workspaces")))
+            entry => id(entry) === "ranu.panorama")))
         return false;
 
     let changed = false;
@@ -52,7 +52,7 @@ function configuredOverviewMode(shell) {
         for (const entry of entries) {
             const id = typeof entry === "string" ? entry
                 : (isPlainObject(entry) ? entry.id : "");
-            if (id === "hancore.overview-workspaces")
+            if (id === "ranu.panorama")
                 return isPlainObject(entry) && entry.sortMode === "system"
                     ? "system" : "legacy";
         }
