@@ -54,6 +54,27 @@ omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --e
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
 
+### Switching from Overview Workspaces
+
+Panorama has its own plugin id (`ranu.panorama`), so `plugin add` installs it
+next to Overview Workspaces instead of replacing it, and both would fight over
+the same Win/Super bindings. Remove the original first, then add Panorama:
+
+```sh
+omarchy plugin remove hancore.overview-workspaces
+omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --enable
+omarchy restart shell
+```
+
+Settings from the gear panel start from their defaults. To keep the learned
+workspace order, move `~/.local/state/omarchy-overview-workspaces` to
+`~/.local/state/omarchy-panorama` before restarting the shell.
+
+If you run a local copy of this repository under the old id instead, rename its
+folder in `~/.config/omarchy/plugins/` to `ranu.panorama`, change the bar entry id
+in `~/.config/omarchy/shell.json` from `hancore.overview-workspaces` to
+`ranu.panorama`, and restart the shell. That keeps your gear-panel settings.
+
 After updating an existing enabled installation, restart Omarchy Shell once so
 the new keybinding service code replaces the preserved `keepLoaded` instance:
 
