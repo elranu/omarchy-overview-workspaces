@@ -261,7 +261,7 @@ Scope {
             implicitWidth: panelWindow.width
             implicitHeight: panelWindow.height
 
-            // ── Overview (工作区概览): full-screen scrim + large grid ──
+            // ── Overview: full-screen scrim + large grid ──
             Rectangle {
                 id: scrim
                 anchors.fill: parent
@@ -492,7 +492,7 @@ Scope {
                 }
             }
 
-            // ── Overview (工作区概览): large workspace grid filling the screen ──
+            // ── Overview: large workspace grid filling the screen ──
             Item {
                 id: overviewContainer
                 anchors.fill: parent

@@ -107,7 +107,7 @@ Item {
     readonly property real monitorOriginY: root.monitorData?.y ?? 0
 
     // ── Adaptive scaling ──
-    // Overview (工作区概览): full-screen grid, auto-select optimal columns
+    // Overview: full-screen grid, auto-select optimal columns
     // Overview switching mode (Win+Tab): current-monitor preview, use config scale value
     // Hyprland reports monitor width/height in physical pixels, while its
     // position, reserved area, and client geometry use logical coordinates.
