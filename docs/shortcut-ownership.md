@@ -11,6 +11,11 @@ When `ranu.panorama` is enabled, the plugin is responsible only for:
   JetBrainsMono Nerd Font close glyph `󰅖` is drawn next to the pointer. Clicking a
   window force-kills only that client; `Esc` or right-click cancels the mode
   without killing anything.
+- `Shift`+arrows, `Shift`+H/J/K/L (with vim keys on), and `Shift`+number inside
+  Overview: move the selected workspace's focused window. Like `Ctrl+Shift+X`,
+  these are handled by the Overview surface while it has keyboard focus and are
+  never registered as Hyprland bindings. The number row is matched by keycode
+  (10–19), so it works on any layout.
 
 While a preview is being dragged, the plugin may temporarily suspend Win+mouse
 move and resize, so dragging a preview does not also trigger Hyprland's own

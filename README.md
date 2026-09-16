@@ -32,6 +32,17 @@ only one of them at a time.
 - A New workspace card always stays at the end of each monitor's list.
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
 - Drag a window from one monitor's Overview onto a workspace on another monitor.
+- Drag a whole workspace to another monitor: grab its card or its number tab and
+  drop it on that monitor's section, or anywhere on that screen when each screen
+  shows only its own workspaces. The New workspace card cannot be dragged.
+- Move a window with the keyboard: `Shift`+arrows (and `Shift`+H/J/K/L when
+  **Keep h/j/k/l for navigation** is on) push the selected workspace's focused
+  window to the neighbouring card, and the selection follows it. `Shift`+number
+  sends it to the card with that number, on any monitor. The moved window is
+  outlined until you navigate away.
+- Close a window with the close button shown on hover or with a middle click.
+  Both ask the app to close, so it can still save or prompt; use force-kill mode
+  for apps that do not respond.
 - Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor is hidden
   and a close icon (`󰅖`) follows the pointer, and clicking a window kills only
   that client. Press `Escape` or right-click to cancel without killing anything.

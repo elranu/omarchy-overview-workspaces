@@ -467,6 +467,9 @@ Item {
     }
 
     function infoWindowForGroup(group) {
+        const carried = ServiceManager.workspace.clientByAddress(GlobalStates.overviewCarriedWindowAddress);
+        if (carried?.mapped && !carried.hidden)
+            return carried;
         const hoveredWindow = root.hoveredWindowForGroup(group);
         if (hoveredWindow)
             return hoveredWindow;
@@ -541,6 +544,110 @@ Item {
 
     onOverviewEntriesChanged: Qt.callLater(root.reconcileFocusedWorkspace)
 
+    // Tracks the pointer in widget coordinates for the force-kill glyph.
+    function notePointer(point) {
+        root.pointerX = point.x;
+        root.pointerY = point.y;
+    }
+
+    // ── Workspace cards: click to open, drag to another monitor ──
+    //
+    // A card and its number tab share one press/move/release path. A press
+    // only arms: past a small threshold it becomes a drag of the whole
+    // workspace, otherwise the release opens the workspace as a press used to.
+    property var workspacePress: null
+    property bool workspaceGrabFailed: false
+    readonly property real workspaceDragThreshold: 8
+
+    function workspacePressed(entry, index, area, mouse) {
+        if (GlobalStates.overviewKillMode || !entry)
+            return;
+        GlobalStates.overviewCarriedWindowAddress = "";
+        const point = area.mapToItem(null, mouse.x, mouse.y);
+        root.workspacePress = {
+            id: entry.id,
+            index: index,
+            isTrailingEmpty: entry.isTrailingEmpty === true,
+            monitorName: entry.monitorName ?? "",
+            x: point.x,
+            y: point.y
+        };
+    }
+
+    function workspaceMoved(area, mouse) {
+        const press = root.workspacePress;
+        if (!press)
+            return;
+        const point = area.mapToItem(null, mouse.x, mouse.y);
+        if (!CrossMonitorDrag.draggingWorkspace) {
+            // The New workspace card is not a workspace yet, so it has nothing
+            // to move.
+            if (press.isTrailingEmpty
+                || Math.hypot(point.x - press.x, point.y - press.y) < root.workspaceDragThreshold
+                || !ServiceManager.workspace.workspaceDataForId(press.id))
+                return;
+            const w = root.entryWidth(press.index);
+            const h = root.entryHeight(press.index);
+            CrossMonitorDrag.beginWorkspace(press.id, press.monitorName, root.monitor?.name ?? "",
+                w, h, root.monitorOriginX + point.x, root.monitorOriginY + point.y);
+            // A card's windows are drawn in a separate layer, not inside the
+            // card, so grabbing the card alone would show an empty wallpaper.
+            // Grab the whole overlay at its logical size and crop to the card.
+            CrossMonitorDrag.previewClip = Qt.rect(root.entryX(press.index), root.entryY(press.index), w, h);
+            const generation = CrossMonitorDrag.generation;
+            root.workspaceGrabFailed = !root.grabToImage(
+                result => CrossMonitorDrag.setPreview(result, generation),
+                Qt.size(root.width, root.height));
+        }
+        CrossMonitorDrag.updatePointer(root.monitorOriginX + point.x, root.monitorOriginY + point.y);
+    }
+
+    function workspaceReleased() {
+        const press = root.workspacePress;
+        root.workspacePress = null;
+        if (!press)
+            return;
+        if (CrossMonitorDrag.draggingWorkspace) {
+            const target = CrossMonitorDrag.workspaceDropMonitorName;
+            CrossMonitorDrag.end();
+            if (target.length > 0)
+                WorkspaceNavigation.moveWorkspaceToMonitor(press.id, target);
+            return;
+        }
+        if (GlobalStates.overviewKillMode || GlobalStates.overviewDraggingTargetWorkspace !== -1)
+            return;
+        if (press.isTrailingEmpty) {
+            if (press.monitorName.length > 0)
+                Hyprland.dispatch(`hl.dsp.focus({monitor="${press.monitorName}"})`);
+            Hyprland.dispatch(`hl.dsp.focus({ workspace = ${press.id} })`);
+            if (press.monitorName.length > 0)
+                Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${press.id}", monitor = "${press.monitorName}" })`);
+        } else {
+            if (ServiceManager.workspace.workspaceHasVisibleWindows(press.id))
+                GlobalStates.promoteWorkspaceMru(press.id);
+            root.dispatchFocusWorkspace(press.id);
+        }
+        GlobalStates.overviewOpen = false;
+    }
+
+    function workspaceCanceled() {
+        root.workspacePress = null;
+        if (CrossMonitorDrag.draggingWorkspace)
+            CrossMonitorDrag.end();
+    }
+
+    // Per-monitor mode draws only this monitor here, so a workspace dropped
+    // anywhere on this screen is meant for it.
+    Connections {
+        target: CrossMonitorDrag
+        function onDraggingWorkspaceChanged() {
+            if (!CrossMonitorDrag.draggingWorkspace || !GlobalStates.overviewPerMonitor)
+                return;
+            CrossMonitorDrag.publishSurface(root.monitor?.name ?? "",
+                root.monitorOriginX, root.monitorOriginY, root.width, root.height);
+        }
+    }
+
     // ── Wheel scroll anywhere cycles workspaces ──
     MouseArea {
         anchors.fill: parent
@@ -570,11 +677,11 @@ Item {
     Rectangle {
         id: crossDragProxy
 
-        readonly property var windowData: CrossMonitorDrag.active
+        readonly property var windowData: CrossMonitorDrag.draggingWindow
             ? (ServiceManager.workspace.windowByAddress?.[CrossMonitorDrag.windowAddress] ?? null)
             : null
 
-        visible: CrossMonitorDrag.active
+        visible: CrossMonitorDrag.draggingWindow
             && CrossMonitorDrag.sourceMonitorName !== (root.monitor?.name ?? "")
             && CrossMonitorDrag.pointerX >= root.monitorOriginX
             && CrossMonitorDrag.pointerX <= root.monitorOriginX + root.width
@@ -637,6 +744,63 @@ Item {
         }
     }
 
+    // A workspace card being dragged, drawn under the pointer on whichever
+    // screen it is over, the source included. It waits for the grab so the
+    // first frame is the card rather than an empty box, unless grabbing failed.
+    Rectangle {
+        id: workspaceDragGhost
+
+        readonly property string dropMonitor: CrossMonitorDrag.workspaceDropMonitorName
+
+        visible: CrossMonitorDrag.draggingWorkspace
+            && (CrossMonitorDrag.previewUrl !== "" || root.workspaceGrabFailed)
+            && CrossMonitorDrag.pointerX >= root.monitorOriginX
+            && CrossMonitorDrag.pointerX <= root.monitorOriginX + root.width
+            && CrossMonitorDrag.pointerY >= root.monitorOriginY
+            && CrossMonitorDrag.pointerY <= root.monitorOriginY + root.height
+
+        width: Math.max(140, CrossMonitorDrag.sourceWidth * 0.7)
+        height: Math.max(90, CrossMonitorDrag.sourceHeight * 0.7)
+        x: CrossMonitorDrag.pointerX - root.monitorOriginX - width / 2
+        y: CrossMonitorDrag.pointerY - root.monitorOriginY - height / 2
+        z: root.windowDraggingZ + 10
+
+        color: Appearance.colors.colSurfaceContainerLow
+        border.width: 2
+        border.color: dropMonitor.length > 0 ? TuiStyle.controlActiveBorder : TuiStyle.inactiveBorder
+        opacity: 0.9
+
+        Image {
+            anchors.fill: parent
+            anchors.margins: 2
+            source: CrossMonitorDrag.previewUrl
+            sourceClipRect: CrossMonitorDrag.previewClip
+            fillMode: Image.Stretch
+            smooth: true
+            cache: false
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            width: ghostCaption.implicitWidth + 16
+            height: ghostCaption.implicitHeight + 6
+            color: ColorUtils.transparentize(TuiStyle.bg, 0.15)
+
+            StyledText {
+                id: ghostCaption
+                anchors.centerIn: parent
+                text: workspaceDragGhost.dropMonitor.length > 0
+                    ? `Move to ${workspaceDragGhost.dropMonitor}`
+                    : `Workspace ${CrossMonitorDrag.sourceWorkspaceId}`
+                color: Appearance.colors.colOnLayer1
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                font.weight: Font.DemiBold
+            }
+        }
+    }
+
     // Workspace grid — grouped by physical monitor in overview mode.
     Item {
         id: monitorGroupUnderlay
@@ -647,8 +811,22 @@ Item {
         Repeater {
             model: root.monitorGroups
             delegate: Rectangle {
+                id: monitorSection
                 required property var modelData
                 readonly property bool focusedGroup: modelData.key === (root.monitor?.name ?? "")
+                readonly property bool dropTarget: CrossMonitorDrag.workspaceDropMonitorName === modelData.key
+
+                Connections {
+                    target: CrossMonitorDrag
+                    function onDraggingWorkspaceChanged() {
+                        if (!CrossMonitorDrag.draggingWorkspace)
+                            return;
+                        const p = monitorSection.mapToItem(null, 0, 0);
+                        CrossMonitorDrag.publishGroup(root.monitor?.name ?? "", monitorSection.modelData.key,
+                            root.monitorOriginX + p.x, root.monitorOriginY + p.y,
+                            monitorSection.width, monitorSection.height);
+                    }
+                }
 
                 x: root.groupX(modelData)
                 y: root.groupY(modelData)
@@ -656,8 +834,8 @@ Item {
                 height: root.groupHeight(modelData)
                 radius: 0
                 color: TuiStyle.bg
-                border.width: focusedGroup ? 2 : 1
-                border.color: focusedGroup
+                border.width: dropTarget ? 3 : (focusedGroup ? 2 : 1)
+                border.color: (focusedGroup || dropTarget)
                     ? TuiStyle.controlActiveBorder
                     : TuiStyle.inactiveBorder
 
@@ -745,14 +923,6 @@ Item {
                         && CrossMonitorDrag.hoveredTarget?.surfaceMonitorName === (root.monitor?.name ?? "")
 
                     readonly property bool isFocused: workspaceValue === root.highlightedWorkspaceId
-                    // In Original mode the Hyprland ID is only an internal
-                    // transport key. The original Overview displayed the
-                    // workspace's visual slot (1, 2, 3, ...). System mode
-                    // keeps the real IDs so its empty slots remain aligned
-                    // with Omarchy's native workspace bar.
-                    readonly property int globalSlot: GlobalStates.overviewSortMode === "legacy"
-                        ? root.globalSlotForWorkspaceId(workspace.workspaceValue)
-                        : workspace.workspaceValue
 
                     x: root.entryX(index)
                     y: root.entryY(index)
@@ -792,23 +962,6 @@ Item {
                             opacity: workspace.isTrailingEmpty ? 1 : 0.26
                         }
 
-                        StyledText {
-                            anchors {
-                                top: parent.top
-                                left: parent.left
-                                margins: 8
-                            }
-                            text: workspace.isTrailingEmpty
-                                ? "New workspace"
-                                : workspace.isPendingOccupied
-                                    ? "Moving…"
-                                    : String(workspace.globalSlot)
-                            font {
-                                pixelSize: Appearance.font.pixelSize.smaller
-                                weight: Font.Medium
-                            }
-                            color: ColorUtils.transparentize(Appearance.colors.colOnLayer1, 0.22)
-                        }
                     }
 
                     MouseArea {
@@ -816,10 +969,11 @@ Item {
                         anchors.fill: parent
                         cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
+                        preventStealing: true
                         onPositionChanged: function(mouse) {
-                            const point = mapToItem(root, mouse.x, mouse.y);
-                            root.pointerX = point.x;
-                            root.pointerY = point.y;
+                            root.notePointer(mapToItem(root, mouse.x, mouse.y));
+                            if (workspaceArea.pressed)
+                                root.workspaceMoved(workspaceArea, mouse);
                         }
                         acceptedButtons: Qt.LeftButton
                         onEntered: {
@@ -832,28 +986,13 @@ Item {
                             if (root.hoveredWorkspaceEntry?.id === workspace.workspaceValue)
                                 root.hoveredWorkspaceEntry = null;
                         }
-                        onPressed: {
-                            // While force-kill is armed a click is aimed at a
-                            // window; landing on a card must not switch to or
-                            // create a workspace and close the overview.
-                            if (GlobalStates.overviewKillMode)
-                                return;
-                            if (GlobalStates.overviewDraggingTargetWorkspace === -1) {
-                                if (workspace.isTrailingEmpty) {
-                                    if (workspace.monitorName.length > 0)
-                                        Hyprland.dispatch(`hl.dsp.focus({monitor="${workspace.monitorName}"})`);
-                                    Hyprland.dispatch(`hl.dsp.focus({ workspace = ${workspace.workspaceValue} })`);
-                                    if (workspace.monitorName.length > 0)
-                                        Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${workspace.workspaceValue}", monitor = "${workspace.monitorName}" })`);
-                                    GlobalStates.overviewOpen = false;
-                                } else {
-                                    if (ServiceManager.workspace.workspaceHasVisibleWindows(workspace.workspaceValue))
-                                        GlobalStates.promoteWorkspaceMru(workspace.workspaceValue);
-                                    root.dispatchFocusWorkspace(workspace.workspaceValue);
-                                    GlobalStates.overviewOpen = false;
-                                }
-                            }
-                        }
+                        // While force-kill is armed a click is aimed at a window;
+                        // landing on a card must not switch to or create a
+                        // workspace and close the overview. workspacePressed and
+                        // workspaceReleased both stand down in that mode.
+                        onPressed: mouse => root.workspacePressed(workspace.modelData, workspace.index, workspaceArea, mouse)
+                        onReleased: root.workspaceReleased()
+                        onCanceled: root.workspaceCanceled()
                     }
 
                     DropArea {
@@ -919,6 +1058,8 @@ Item {
                     }
                     toplevel: modelToplevel
                     captureActive: GlobalStates.overviewOpen
+                    carried: GlobalStates.overviewCarriedWindowAddress.length > 0
+                        && ServiceManager.workspace.normalizeAddress(GlobalStates.overviewCarriedWindowAddress) === address
                     monitorData: this.monitor
                     scale: root.workspaceScale
                     scaleX: {
@@ -992,9 +1133,7 @@ Item {
                         cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
                         onPositionChanged: function(mouse) {
-                            const point = mapToItem(root, mouse.x, mouse.y);
-                            root.pointerX = point.x;
-                            root.pointerY = point.y;
+                            root.notePointer(mapToItem(root, mouse.x, mouse.y))
                             // The pointer grab keeps delivering motion after the
                             // cursor leaves this surface, with coordinates outside
                             // our own bounds. Publishing it in global coordinates is
@@ -1037,6 +1176,7 @@ Item {
                             // not arm a drag.
                             if (mouse.button !== Qt.LeftButton)
                                 return;
+                            GlobalStates.overviewCarriedWindowAddress = ""
                             window.snapshotPreview()
                             WorkspaceNavigation.beginWindowDrag(window.windowData?.workspace?.id)
                             const press = dragArea.mapToItem(null, mouse.x, mouse.y)
@@ -1138,6 +1278,52 @@ Item {
                             }
                         }
                     }
+
+                    // Close button on hover. It asks the app to close, like the
+                    // middle click, so the app can still save or ask; force-kill
+                    // stays behind Ctrl+Shift+X. Its own hover keeps it up, since
+                    // moving onto it can count as leaving the window.
+                    Rectangle {
+                        id: closeButton
+                        readonly property real size: Math.max(16, Math.min(26, Math.min(window.width, window.height) * 0.22))
+                        z: 10
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 4
+                        width: size
+                        height: size
+                        visible: (window.hovered || closeArea.containsMouse)
+                            && !GlobalStates.overviewKillMode
+                            && !window.pressed
+                            && !CrossMonitorDrag.active
+                            && window.width >= 44
+                            && window.height >= 32
+                        color: closeArea.containsMouse
+                            ? TuiStyle.accent
+                            : ColorUtils.transparentize(TuiStyle.bg, 0.15)
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰅖"
+                            color: closeArea.containsMouse ? TuiStyle.bg : Appearance.colors.colOnLayer1
+                            font.family: "JetBrainsMono Nerd Font Mono"
+                            font.pixelSize: closeButton.size * 0.7
+                            renderType: Text.NativeRendering
+                        }
+
+                        MouseArea {
+                            id: closeArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: event => {
+                                if (window.windowData?.address)
+                                    Hyprland.dispatch(`hl.dsp.window.close({window = "address:${window.windowData.address}"})`)
+                                event.accepted = true
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1151,6 +1337,72 @@ Item {
                 font.family: "JetBrainsMono Nerd Font Mono"
                 font.pixelSize: 28
                 renderType: Text.NativeRendering
+            }
+
+            Repeater { // Workspace number tabs, above windows so a full card stays draggable
+                model: root.overviewEntries
+                delegate: Rectangle {
+                    id: slotTab
+                    required property var modelData
+                    readonly property int entryIndex: root.indexForWorkspaceId(modelData.id)
+                    readonly property bool isTrailingEmpty: modelData.isTrailingEmpty ?? false
+                    // Occupied-only ordering numbers cards by visual slot, the
+                    // way Win+number addresses them; native ordering keeps the
+                    // real ids so empty slots line up with the native bar.
+                    readonly property int slot: GlobalStates.overviewSortMode === "legacy"
+                        ? root.globalSlotForWorkspaceId(modelData.id)
+                        : modelData.id
+                    readonly property bool dragging: CrossMonitorDrag.draggingWorkspace
+                        && CrossMonitorDrag.sourceWorkspaceId === modelData.id
+
+                    visible: entryIndex >= 0
+                    x: root.entryX(entryIndex) + 6
+                    y: root.entryY(entryIndex) + 6
+                    z: root.windowZ + 5
+                    width: slotLabel.implicitWidth + 14
+                    height: slotLabel.implicitHeight + 6
+                    color: tabArea.containsMouse || dragging
+                        ? ColorUtils.transparentize(TuiStyle.bg, 0.05)
+                        : ColorUtils.transparentize(TuiStyle.bg, 0.35)
+
+                    StyledText {
+                        id: slotLabel
+                        anchors.centerIn: parent
+                        text: slotTab.isTrailingEmpty
+                            ? "New workspace"
+                            : (slotTab.modelData.isPendingOccupied ?? false)
+                                ? "Moving…"
+                                : String(slotTab.slot)
+                        font {
+                            pixelSize: Appearance.font.pixelSize.smaller
+                            weight: Font.Medium
+                        }
+                        color: tabArea.containsMouse || slotTab.dragging
+                            ? Appearance.colors.colOnLayer1
+                            : ColorUtils.transparentize(Appearance.colors.colOnLayer1, 0.22)
+                    }
+
+                    MouseArea {
+                        id: tabArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        preventStealing: true
+                        acceptedButtons: Qt.LeftButton
+                        cursorShape: GlobalStates.overviewKillMode
+                            ? Qt.BlankCursor
+                            : slotTab.isTrailingEmpty
+                                ? Qt.PointingHandCursor
+                                : (slotTab.dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
+                        onPressed: mouse => root.workspacePressed(slotTab.modelData, slotTab.entryIndex, tabArea, mouse)
+                        onPositionChanged: mouse => {
+                            root.notePointer(mapToItem(root, mouse.x, mouse.y));
+                            if (tabArea.pressed)
+                                root.workspaceMoved(tabArea, mouse);
+                        }
+                        onReleased: root.workspaceReleased()
+                        onCanceled: root.workspaceCanceled()
+                    }
+                }
             }
 
             Repeater { // Workspace entry borders (on top of windows)

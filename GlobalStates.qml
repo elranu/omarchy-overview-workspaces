@@ -46,6 +46,10 @@ Singleton {
     property var overviewPendingWorkspaceMonitorById: ({})
     property var overviewPendingOccupiedWorkspaces: []
     property var overviewPendingWindowWorkspaceByAddress: ({})
+    // Window moved with Shift+arrows or Shift+number. Later presses keep moving
+    // it until the selection is walked on its own, a window is clicked or
+    // dragged, or the overview closes.
+    property string overviewCarriedWindowAddress: ""
     property int overviewRefreshSerial: 0
     property bool regionSelectorOpen: false
     property bool screenshotActive: false

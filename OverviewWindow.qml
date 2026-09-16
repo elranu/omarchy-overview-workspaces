@@ -102,6 +102,8 @@ Item { // Window
     property var targetWindowHeight: Math.max(1, Math.min(rawWindowHeight, Math.max(1, workspaceHeight - localY)))
     property bool hovered: false
     property bool pressed: false
+    // Being moved with Shift+arrows or Shift+number.
+    property bool carried: false
     property bool centerIcons: Config.options.overview.centerIcons
     property real iconGapRatio: 0.06
     property real iconToWindowRatio: centerIcons ? 0.35 : 0.15
@@ -392,14 +394,18 @@ Item { // Window
     }
 
     // Window previews do not draw their own outline. The workspace card border
-    // is the single visual boundary for both the workspace and its previews.
+    // is the single visual boundary for both the workspace and its previews,
+    // except for a window being carried by the keyboard, which must stay
+    // findable as it moves.
     Rectangle {
+        z: 4
         anchors.fill: parent
         color: "transparent"
         topLeftRadius: root.topLeftRadius
         topRightRadius: root.topRightRadius
         bottomRightRadius: root.bottomRightRadius
         bottomLeftRadius: root.bottomLeftRadius
-        border.width: 0
+        border.width: root.carried ? 3 : 0
+        border.color: TuiStyle.accent
     }
 }

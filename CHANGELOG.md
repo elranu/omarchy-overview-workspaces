@@ -8,6 +8,14 @@
   original plugin.
 - Windows can be dragged from one monitor's Overview onto a workspace on another
   monitor.
+- Workspaces can be dragged to another monitor by their card or number tab.
+  Number tabs now sit above the window previews so a full card stays grabbable.
+- `Shift`+arrows, `Shift`+H/J/K/L, and `Shift`+number move the selected
+  workspace's focused window from the keyboard. Auto-repeat is ignored.
+- Window previews show a close button on hover. Middle click, which already
+  closed windows, is now documented.
+- Opening a workspace from its card happens on release instead of press, so a
+  press can start a drag.
 - Workspace ordering is now a single **Occupied workspaces only** on/off toggle.
   The stored `sortMode` values are unchanged.
 - Removed the Chinese and Japanese documentation; the repository is English-only.

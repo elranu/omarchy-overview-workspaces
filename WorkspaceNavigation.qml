@@ -5,6 +5,7 @@ import "."
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "OverviewMoves.js" as OverviewMoves
 
 Singleton {
     id: root
@@ -92,6 +93,9 @@ Singleton {
     }
 
     function navigateByIndex(delta, includeTrailing) {
+        // Walking the selection on its own means the user has let go of the
+        // window they were carrying.
+        GlobalStates.overviewCarriedWindowAddress = "";
         const allowTrailing = includeTrailing ?? true;
         const model = allowTrailing
             ? root.overviewModel()
@@ -192,8 +196,11 @@ Singleton {
         if (!windowAddress || targetWorkspace === -1 || targetWorkspace === currentWorkspaceId)
             return false;
 
-        const sourceVisibleWindows = ServiceManager.workspace.hyprlandClientsForWorkspace(currentWorkspaceId)
-            .filter(win => win.mapped && !win.hidden);
+        // Counted by effective workspace: a window moved moments ago still sits
+        // on its old workspace in Hyprland's data, and keyboard moves chain
+        // faster than that data refreshes.
+        const sourceVisibleWindows = ServiceManager.workspace.windowList
+            .filter(win => win.mapped && !win.hidden && root.effectiveWorkspaceId(win) === currentWorkspaceId);
         const sourceIsEmptyAfterMove = sourceVisibleWindows.length <= 1;
 
         // A workspace id never identifies a card on its own: each monitor allocates
@@ -241,6 +248,81 @@ Singleton {
             }
         }
 
+        GlobalStates.refreshOverviewModel();
+        root.pendingDragRefreshes = 4;
+        refreshAfterDragTimer.restart();
+        return true;
+    }
+
+    function effectiveWorkspaceId(win) {
+        const pending = GlobalStates.overviewPendingWindowWorkspaceByAddress ?? {};
+        const address = String(win?.address ?? "");
+        const pendingId = Number(pending[address] ?? pending[ServiceManager.workspace.normalizeAddress(address)] ?? 0);
+        return pendingId > 0 ? pendingId : (win?.workspace?.id ?? -1);
+    }
+
+    // The window a keyboard move acts on: the one already being carried, else
+    // the selected workspace's focused window -- the one the info bar names.
+    // The pointer deliberately plays no part: a mouse resting or drifting over
+    // some other window must never decide what a key press moves.
+    function carryCandidate() {
+        const data = ServiceManager.workspace;
+        const carried = data.clientByAddress(GlobalStates.overviewCarriedWindowAddress);
+        if (carried?.mapped && !carried.hidden)
+            return carried;
+        return data.focusedClientForWorkspace(root.focusedWorkspaceId());
+    }
+
+    function carryWindowToEntry(entry) {
+        const win = root.carryCandidate();
+        if (!win?.address || !entry || entry.id < 1)
+            return false;
+        const sourceId = root.effectiveWorkspaceId(win);
+        GlobalStates.overviewCarriedWindowAddress = win.address;
+        if (entry.id !== sourceId)
+            root.commitWindowDrag(win.address, sourceId, entry.id, entry.isTrailingEmpty === true, entry.monitorName ?? "");
+        // Follow the window when its new card is on this overlay, so repeated
+        // presses keep pushing the same window along.
+        if (root.overviewModel().some(candidate => candidate.id === entry.id))
+            root.selectWorkspace(entry.id);
+        return true;
+    }
+
+    // Moves the carried window to the neighbouring card, with the same
+    // wrap-around and row width as arrow navigation.
+    function carryWindowByGrid(deltaRow, deltaCol) {
+        const win = root.carryCandidate();
+        const model = root.overviewModel();
+        if (!win || model.length === 0)
+            return false;
+        const sourceId = root.effectiveWorkspaceId(win);
+        let index = model.findIndex(entry => entry.id === sourceId);
+        if (index < 0)
+            index = root.indexForWorkspace(model, root.focusedWorkspaceId());
+        const delta = deltaCol !== 0 ? deltaCol : deltaRow * root.gridColumnsForModel(model);
+        return root.carryWindowToEntry(model[OverviewMoves.stepIndex(model.length, index, delta)]);
+    }
+
+    // Moves the carried window to the card numbered `slot`, on any monitor.
+    function carryWindowToSlot(slot) {
+        let entries = ServiceManager.workspace.overviewWorkspaceEntries ?? [];
+        if (entries.length === 0)
+            entries = ServiceManager.workspace.overviewWorkspaceEntriesGlobal(true);
+        return root.carryWindowToEntry(OverviewMoves.entryForSlot(entries, slot, GlobalStates.overviewSortMode));
+    }
+
+    // Sends a whole workspace, windows included, to another monitor. The owner
+    // is recorded as pending first so the card changes sections at once rather
+    // than when Hyprland's next event arrives.
+    function moveWorkspaceToMonitor(workspaceId, monitorName) {
+        const target = String(monitorName ?? "");
+        const ws = ServiceManager.workspace.workspaceDataForId(workspaceId);
+        if (workspaceId < 1 || target.length === 0 || !ws || ServiceManager.workspace.workspaceMonitorName(ws) === target)
+            return false;
+        const nextPending = Object.assign({}, GlobalStates.overviewPendingWorkspaceMonitorById ?? {});
+        nextPending[workspaceId] = target;
+        GlobalStates.overviewPendingWorkspaceMonitorById = nextPending;
+        Hyprland.dispatch(`hl.dsp.workspace.move({ workspace = "${workspaceId}", monitor = "${target}" })`);
         GlobalStates.refreshOverviewModel();
         root.pendingDragRefreshes = 4;
         refreshAfterDragTimer.restart();

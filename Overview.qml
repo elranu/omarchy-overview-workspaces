@@ -9,6 +9,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Hyprland._GlobalShortcuts 0.0
+import "OverviewMoves.js" as OverviewMoves
 import "ColorUtils.js" as ColorUtils
 
 Scope {
@@ -91,6 +92,48 @@ Scope {
         }
     }
 
+    // Shift+arrows (and Shift+H/J/K/L with vim keys on) push a window to the
+    // neighbouring card; Shift+number sends it to that card on any monitor.
+    // Returns whether the key was one of these.
+    //
+    // Every move dispatches to Hyprland and rebuilds the grid, so a held key
+    // must not turn into a stream of them: auto-repeat is swallowed and
+    // presses closer together than carryInterval are dropped.
+    readonly property int carryInterval: 150
+    property real lastCarryAt: 0
+
+    function handleCarryKey(event) {
+        const mods = event.modifiers;
+        if (!(mods & Qt.ShiftModifier) || (mods & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
+            return false;
+        const vim = GlobalStates.overviewVimKeys;
+        const key = event.key;
+        let move = null;
+        if (key === Qt.Key_Left || (vim && key === Qt.Key_H))
+            move = () => WorkspaceNavigation.carryWindowByGrid(0, -1);
+        else if (key === Qt.Key_Right || (vim && key === Qt.Key_L))
+            move = () => WorkspaceNavigation.carryWindowByGrid(0, 1);
+        else if (key === Qt.Key_Up || (vim && key === Qt.Key_K))
+            move = () => WorkspaceNavigation.carryWindowByGrid(-1, 0);
+        else if (key === Qt.Key_Down || (vim && key === Qt.Key_J))
+            move = () => WorkspaceNavigation.carryWindowByGrid(1, 0);
+        else {
+            // The number row is matched by keycode: with Shift held the key
+            // produces a symbol that differs between layouts.
+            const slot = OverviewMoves.slotFromKeycode(event.nativeScanCode);
+            if (slot < 1)
+                return false;
+            move = () => WorkspaceNavigation.carryWindowToSlot(slot);
+        }
+        event.accepted = true;
+        const now = Date.now();
+        if (event.isAutoRepeat || now - overviewScope.lastCarryAt < overviewScope.carryInterval)
+            return true;
+        overviewScope.lastCarryAt = now;
+        move();
+        return true;
+    }
+
     function isFocusedScreen(screen) {
         return screen?.name === overviewScope.focusedScreen?.name;
     }
@@ -151,6 +194,7 @@ Scope {
                 GlobalStates.overviewAnchorMonitorName = "";
                 GlobalStates.overviewPendingWorkspaceMonitorById = ({});
                 GlobalStates.overviewPendingOccupiedWorkspaces = [];
+                GlobalStates.overviewCarriedWindowAddress = "";
             }
             overviewScope.setNativeMouseGuard(GlobalStates.overviewOpen);
         }
@@ -363,6 +407,10 @@ Scope {
                         overviewScope.handleOverviewNavigationKey(event);
                         return;
                     }
+                    // Ahead of search entry: with vim keys off a shifted key has
+                    // text and would otherwise start a search.
+                    if (!GlobalStates.overviewSearchMode && overviewScope.handleCarryKey(event))
+                        return;
                     // ── Search mode keyboard handling ──
                     if (GlobalStates.overviewSearchMode) {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {

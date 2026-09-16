@@ -1,6 +1,7 @@
 # Cross-monitor drag contract
 
-This document defines the integration boundary for cross-monitor window dragging.
+This document defines the integration boundary for cross-monitor window and
+workspace dragging.
 It is intentionally separate from keybinding ownership, thumbnail capture, icon
 lookup, and workspace model refreshes.
 
@@ -18,6 +19,22 @@ the per-monitor `PanelWindow` surfaces:
 It must not bind, unbind, reload, or dispatch any keyboard shortcut. It must not
 change `KeybindingService.qml`, the Super-key guard, or native Hyprland mouse
 bindings.
+
+## Two kinds of drag
+
+`CrossMonitorDrag.kind` is `"window"` or `"workspace"`, and consumers must ignore
+the kind they do not handle. `hoveredTarget` is null outside a window drag, and
+`workspaceDropMonitorName` is empty outside a workspace drag.
+
+- A **window** drag drops one client on a workspace card, as described below.
+- A **workspace** drag drops a whole card on a monitor. Each rendered monitor
+  section publishes its rectangle with `publishGroup`. In per-monitor mode each
+  surface also publishes itself with `publishSurface`, because it draws only its
+  own monitor. A section hit wins over a surface hit, and a drop on the monitor
+  that already owns the workspace resolves to no target. The commit goes through
+  `WorkspaceNavigation.moveWorkspaceToMonitor`, which records the new owner as
+  pending before it dispatches. The trailing New workspace card is not a
+  workspace yet and cannot be dragged.
 
 ## Two monitor identities
 
