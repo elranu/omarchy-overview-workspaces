@@ -21,20 +21,34 @@ Item {
         onTriggered: root.applyBindings()
     }
 
+    // A runtime binding transaction can produce a configreloaded event on some
+    // Hyprland versions. Ignore that event while our own binding transaction
+    // is settling; otherwise the service can repeatedly apply the same script
+    // and starve the Quickshell event loop. Events arriving after the guard
+    // expires are genuine external reloads and still trigger reinstallation.
+    Timer {
+        id: bindingApplyGuard
+        interval: 750
+        repeat: false
+    }
+
     // The only key expressions installed below belong to this plugin. Never
     // add a generic SUPER+key observer: it cannot distinguish a standalone
     // Super release from a user shortcut such as Ctrl+Super+V.
     function configuredMode() {
-        const config = root.shell?.shellConfig;
-        const bar = config?.bar;
-        const layout = bar?.layout;
-        for (const section of ["left", "center", "right"]) {
-            for (const entry of layout?.[section] ?? []) {
-                if (entry?.id === "hancore.overview-workspaces")
-                    return entry.sortMode === "system" ? "system" : "legacy";
-            }
+        return WorkspaceBarConfig.configuredOverviewMode(root.shell);
+    }
+
+    function migrateLegacyDuplicateWidget() {
+        const legacyConfig = WorkspaceBarConfig.legacyShellConfig(root.shell);
+        if (!legacyConfig || typeof root.shell.mutateShellConfig !== "function")
+            return;
+        const configCopy = JSON.parse(JSON.stringify(legacyConfig));
+        if (WorkspaceBarConfig.removeDuplicateNativeWidget(configCopy)) {
+            root.shell.mutateShellConfig(function(config) {
+                WorkspaceBarConfig.removeDuplicateNativeWidget(config);
+            });
         }
-        return "";
     }
 
     // Workspace numbers and the overview navigation chords are the only normal
@@ -89,16 +103,21 @@ Item {
             : commands.join("; ");
     }
 
+    function transitionScript(previousMode, nextMode) {
+        const commands = [root.bindingScript(nextMode === "legacy")];
+        // Only a live legacy -> system transition proves that these number
+        // bindings belong to this service. Restore the native mappings during
+        // that handoff; a fresh system-mode start must leave user mappings alone.
+        if (WorkspaceBarConfig.requiresNativeWorkspaceNumberRestore(previousMode, nextMode))
+            for (const command of root.nativeWorkspaceNumberCommands())
+                commands.push(command);
+        return commands.join("; ");
+    }
+
     function applyBindings() {
         if (!root.shell)
             return;
-        const configCopy = JSON.parse(JSON.stringify(root.shell.shellConfig ?? {}));
-        if (WorkspaceBarConfig.removeDuplicateNativeWidget(configCopy)
-                && typeof root.shell.mutateShellConfig === "function") {
-            root.shell.mutateShellConfig(function(config) {
-                WorkspaceBarConfig.removeDuplicateNativeWidget(config);
-            });
-        }
+        root.migrateLegacyDuplicateWidget();
         const mode = root.configuredMode();
         if (mode === "") {
             if (root.appliedMode !== "") {
@@ -110,7 +129,8 @@ Item {
         if (root.appliedMode === mode)
             return;
         root.restoring = false;
-        Quickshell.execDetached(["hyprctl", "eval", root.bindingScript(mode === "legacy")]);
+        bindingApplyGuard.restart();
+        Quickshell.execDetached(["hyprctl", "eval", root.transitionScript(root.appliedMode, mode)]);
         root.appliedMode = mode;
     }
 
@@ -119,6 +139,8 @@ Item {
             return;
         root.restoring = true;
         const commands = [
+            'if _G.hancoreOverviewSuperListener then _G.hancoreOverviewSuperListener:remove(); _G.hancoreOverviewSuperListener = nil end',
+            '_G.hancoreOverviewSuperDown = nil',
             'hl.unbind("SUPER_L")',
             'hl.unbind("SUPER_R")',
             'hl.unbind("SUPER + SUPER_L")',
@@ -139,6 +161,10 @@ Item {
 
     Connections {
         target: root.shell
+        ignoreUnknownSignals: true
+        function onBarConfigChanged() {
+            Qt.callLater(root.applyBindings);
+        }
         function onShellConfigChanged() {
             Qt.callLater(root.applyBindings);
         }
@@ -149,6 +175,8 @@ Item {
 
         function onRawEvent(event) {
             if (event?.name !== "configreloaded")
+                return;
+            if (bindingApplyGuard.running)
                 return;
             root.appliedMode = "";
             root.restoring = false;

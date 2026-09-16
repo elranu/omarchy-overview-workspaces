@@ -14,10 +14,12 @@ Item {
     id: root
     required property var screen
     property real wheelAccum: 0
+    property real pointerX: width / 2
+    property real pointerY: height / 2
     readonly property string configuredWallpaperPath: FileUtils.expandHomePath(Config.options.background.wallpaperPath)
     // The overview process's keepalive window owns the preloader. readyUrl
     // changes only after the requested revision has decoded.
-    readonly property url displayedWallpaperUrl: Wallpaper.readyUrl != ""
+    readonly property url displayedWallpaperUrl: Wallpaper.readyUrl !== ""
         ? Wallpaper.readyUrl
         : Wallpaper.requestedUrl
     readonly property HyprlandMonitor monitor: Hyprland.monitorFor(screen)
@@ -50,7 +52,7 @@ Item {
         const name = root.monitor?.name ?? "";
         if (name.length === 0)
             return all;
-        const own = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(name, true, {}, false, true) ?? [];
+        const own = ServiceManager.workspace.overviewWorkspaceEntriesForMonitor(name, true, {}, true, true) ?? [];
         // If Hyprland has not reported this monitor yet, showing everything beats
         // leaving the screen blank.
         return own.length > 0 ? own : all;
@@ -166,7 +168,8 @@ Item {
     readonly property real workspaceImplicitWidth: Math.floor(Math.min(thumbByWidth, thumbByHeight / maxWorkspaceAspect))
     readonly property real workspaceImplicitHeight: Math.floor(workspaceImplicitWidth * (screenH / screenW))
 
-    property real scale: workspaceImplicitWidth / screenW
+    // Keep the thumbnail scale separate from QQuickItem's built-in `scale`.
+    property real workspaceScale: workspaceImplicitWidth / screenW
 
     // Omarchy's current decoration:rounding is 0; keep the overview flat too.
     property real largeWorkspaceRadius: 0
@@ -724,7 +727,7 @@ Item {
                     property int colIndex: root.entryLocalColumn(index)
                     property int rowIndex: root.entryLocalRow(index)
                     property color defaultWorkspaceColor: {
-                        if (!root.configuredWallpaperPath || root.displayedWallpaperUrl == "") {
+                        if (!root.configuredWallpaperPath || root.displayedWallpaperUrl === "") {
                             return OmarchyTheme.tintedBackground;
                         }
                         return Appearance.colors.colSurfaceContainerLow;
@@ -811,7 +814,13 @@ Item {
                     MouseArea {
                         id: workspaceArea
                         anchors.fill: parent
+                        cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
+                        onPositionChanged: function(mouse) {
+                            const point = mapToItem(root, mouse.x, mouse.y);
+                            root.pointerX = point.x;
+                            root.pointerY = point.y;
+                        }
                         acceptedButtons: Qt.LeftButton
                         onEntered: {
                             if (!GlobalStates.overviewDraggingTargetWorkspace || GlobalStates.overviewDraggingTargetWorkspace === -1) {
@@ -846,7 +855,7 @@ Item {
                         anchors.fill: parent
                         onEntered: {
                             WorkspaceNavigation.setDragTarget(workspace.workspaceValue, workspace.isTrailingEmpty, workspace.monitorName)
-                            if (GlobalStates.overviewDraggingFromWorkspace == GlobalStates.overviewDraggingTargetWorkspace) return;
+                            if (GlobalStates.overviewDraggingFromWorkspace === GlobalStates.overviewDraggingTargetWorkspace) return;
                             hoveredWhileDragging = true
                         }
                         onExited: {
@@ -893,7 +902,7 @@ Item {
                     id: window
                     required property string modelData
                     property int monitorId: windowData?.monitor
-                    property var monitor: ServiceManager.workspace.monitors.find(m => m.id == monitorId)
+                    property var monitor: ServiceManager.workspace.monitors.find(m => m.id === monitorId)
                     property string address: modelData
                     property var modelToplevel: {
                         const values = ToplevelManager.toplevels.values;
@@ -906,18 +915,18 @@ Item {
                     toplevel: modelToplevel
                     captureActive: GlobalStates.overviewOpen
                     monitorData: this.monitor
-                    scale: root.scale
+                    scale: root.workspaceScale
                     scaleX: {
                         const mon = window.monitor;
                         if (!mon)
-                            return root.scale;
+                            return root.workspaceScale;
                         const logicalWidth = root.usableLogicalWidth(mon, null);
                         return root.entryWidth(workspaceEntryIndex) / logicalWidth;
                     }
                     scaleY: {
                         const mon = window.monitor;
                         if (!mon)
-                            return root.scale;
+                            return root.workspaceScale;
                         const logicalHeight = root.usableLogicalHeight(mon, null);
                         return root.entryHeight(workspaceEntryIndex) / logicalHeight;
                     }
@@ -975,7 +984,22 @@ Item {
                     MouseArea {
                         id: dragArea
                         anchors.fill: parent
+                        cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                         hoverEnabled: true
+                        onPositionChanged: function(mouse) {
+                            const point = mapToItem(root, mouse.x, mouse.y);
+                            root.pointerX = point.x;
+                            root.pointerY = point.y;
+                            // The pointer grab keeps delivering motion after the
+                            // cursor leaves this surface, with coordinates outside
+                            // our own bounds. Publishing it in global coordinates is
+                            // what makes a drop on another monitor resolvable.
+                            if (window.pressed) {
+                                const global = dragArea.mapToItem(null, mouse.x, mouse.y);
+                                CrossMonitorDrag.updatePointer(root.monitorOriginX + global.x,
+                                    root.monitorOriginY + global.y);
+                            }
+                        }
                         onEntered: {
                             window.hovered = true
                             root.hoveredWindowData = window.windowData
@@ -998,8 +1022,12 @@ Item {
                                 root.hoveredWorkspaceEntry = null
                         }
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        drag.target: parent
+                        drag.target: GlobalStates.overviewKillMode ? null : parent
                         onPressed: (mouse) => {
+                            if (GlobalStates.overviewKillMode) {
+                                window.pressed = true;
+                                return;
+                            }
                             // Middle click closes the window in onClicked; it must
                             // not arm a drag.
                             if (mouse.button !== Qt.LeftButton)
@@ -1024,19 +1052,11 @@ Item {
                             window.Drag.hotSpot.y = mouse.y
                         }
 
-                        // The pointer grab keeps delivering motion after the cursor
-                        // leaves this surface, with coordinates outside our bounds.
-                        // Publishing it globally is what makes a drop on another
-                        // monitor resolvable at all.
-                        onPositionChanged: (mouse) => {
-                            if (!window.pressed)
-                                return;
-                            const p = dragArea.mapToItem(null, mouse.x, mouse.y);
-                            CrossMonitorDrag.updatePointer(root.monitorOriginX + p.x,
-                                root.monitorOriginY + p.y);
-                        }
-
                         onReleased: {
+                            if (GlobalStates.overviewKillMode) {
+                                window.pressed = false;
+                                return;
+                            }
                             // Only a press that armed a drag gets here: a middle
                             // click returns early above and must not commit.
                             if (!window.pressed)
@@ -1083,6 +1103,14 @@ Item {
                         onClicked: (event) => {
                             if (!window.windowData) return;
 
+                            if (GlobalStates.overviewKillMode && event.button === Qt.LeftButton) {
+                                Hyprland.dispatch(`hl.dsp.window.kill({window = "address:${window.windowData.address}"})`)
+                                GlobalStates.overviewKillMode = false;
+                                GlobalStates.overviewOpen = false;
+                                event.accepted = true;
+                                return;
+                            }
+
                             if (event.button === Qt.LeftButton) {
                                 // Dispatch before dismissing. Closing the layer
                                 // surface first hands focus back to whatever was
@@ -1100,6 +1128,18 @@ Item {
                         }
                     }
                 }
+            }
+
+            Text {
+                visible: GlobalStates.overviewKillMode
+                z: root.windowDraggingZ + 1
+                x: root.pointerX + 8
+                y: root.pointerY + 8
+                text: "󰅖"
+                color: TuiStyle.accent
+                font.family: "JetBrainsMono Nerd Font Mono"
+                font.pixelSize: 28
+                renderType: Text.NativeRendering
             }
 
             Repeater { // Workspace entry borders (on top of windows)
