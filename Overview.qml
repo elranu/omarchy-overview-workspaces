@@ -10,6 +10,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Hyprland._GlobalShortcuts 0.0
 import "ColorUtils.js" as ColorUtils
+import "SearchKeys.js" as SearchKeys
 
 Scope {
     id: overviewScope
@@ -393,7 +394,7 @@ Scope {
                             event.accepted = true;
                             return;
                         }
-                        if (event.text.length > 0
+                        if (SearchKeys.isTypedText(event.text)
                             && !(event.modifiers & Qt.ControlModifier)
                             && !(event.modifiers & Qt.AltModifier)
                             && !(event.modifiers & Qt.MetaModifier)
@@ -410,7 +411,9 @@ Scope {
                     // navigate; with them off the first character typed both opens
                     // search and becomes the query.
                     if (!GlobalStates.overviewSearchMode) {
-                        const plainKey = event.text.length > 0
+                        // Enter reports "\r" as its text; without this check it
+                        // opened search instead of the selected workspace.
+                        const plainKey = SearchKeys.isTypedText(event.text)
                             && !(event.modifiers & Qt.ControlModifier)
                             && !(event.modifiers & Qt.AltModifier)
                             && !(event.modifiers & Qt.MetaModifier)
