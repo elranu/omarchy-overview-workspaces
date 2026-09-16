@@ -18,7 +18,7 @@
   },
   "barWidget": {
     "displayName": "Workspace ordering",
-    "description": "Configure Optimized order (recommended) or System native order. Optimized order keeps dynamic visual slots, routes Win+number to those slots, and keeps New workspace last.",
+    "description": "Choose occupied workspaces only (recommended) or show native empty slots 1–10. Occupied workspaces follow MRU order in both modes, and New workspace stays last.",
     "category": "Desktop",
     "allowMultiple": false,
     "defaultSection": "left"

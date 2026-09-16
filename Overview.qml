@@ -278,6 +278,19 @@ Scope {
                     anchors.fill: parent
                     cursorShape: GlobalStates.overviewKillMode ? Qt.BlankCursor : Qt.ArrowCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    // Kill mode hides the cursor and draws its glyph at the
+                    // widget's pointer position, which only the cards update.
+                    // Over the gaps between them the glyph froze at its last card
+                    // while the real cursor moved on, so the scrim feeds it too.
+                    hoverEnabled: GlobalStates.overviewKillMode
+                    onPositionChanged: mouse => {
+                        const widget = overviewLoader.item;
+                        if (!widget)
+                            return;
+                        const point = mapToItem(widget, mouse.x, mouse.y);
+                        widget.pointerX = point.x;
+                        widget.pointerY = point.y;
+                    }
                     onClicked: {
                         if (GlobalStates.overviewKillMode && mouse.button === Qt.RightButton) {
                             GlobalStates.overviewKillMode = false;
@@ -320,6 +333,13 @@ Scope {
                     if (event.key === Qt.Key_X
                         && (event.modifiers & Qt.ControlModifier)
                         && (event.modifiers & Qt.ShiftModifier)) {
+                        // Search results sit above the grid, and clicking one
+                        // launches or focuses rather than kills. Leave search
+                        // first so the only thing a click can hit is a window.
+                        if (GlobalStates.overviewSearchMode) {
+                            GlobalStates.overviewSearchMode = false;
+                            overviewScope.overviewFilterQuery = "";
+                        }
                         GlobalStates.overviewKillMode = true;
                         event.accepted = true;
                         return;
