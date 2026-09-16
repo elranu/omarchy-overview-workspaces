@@ -1,4 +1,4 @@
-# Overview Workspaces
+# Panorama
 
 ![Overview after pressing Win](preview.png)
 
@@ -8,23 +8,30 @@
 
 *Click and drag windows inside Overview to move them between workspaces.*
 
-Overview Workspaces is an Omarchy Quattro experience-enhancement plugin. It provides a full-screen workspace overview with live window previews, wallpaper-backed workspace cards, dynamic workspace ordering, native workspace ordering, drag-and-drop movement, and automatic keyboard integration.
+Panorama is a multi-monitor workspace overview for Omarchy. It provides a full-screen overview on every monitor with live window previews, wallpaper-backed workspace cards, MRU workspace ordering, drag-and-drop between workspaces and monitors, search, and automatic keyboard integration.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
 
-## Marketplace
+## Credits
 
-Overview Workspaces has been approved and verified in the Omarchy plugin marketplace:
-[open the published marketplace page](https://plugins.omarchy.org/plugin.html?id=hancore.overview-workspaces).
+Panorama is a fork of
+[iamcheyan/omarchy-overview-workspaces](https://github.com/iamcheyan/omarchy-overview-workspaces)
+(Overview Workspaces, by HANCORE), which is published separately in the Omarchy
+plugin marketplace. Panorama adds multi-monitor support, such as dragging windows
+between monitors, and follows its own release line. Both are MIT licensed.
+
+Panorama and Overview Workspaces take over the same Win/Super bindings, so enable
+only one of them at a time.
 
 ## Features
 
 - Press the standalone Win/Super key to open or close Overview.
 - Live `ScreencopyView` thumbnails for windows on every workspace.
 - Wallpaper-backed workspace cards, including an opaque New workspace card.
-- Empty workspaces remain visible when using native ordering.
+- Empty workspaces remain visible when **Occupied workspaces only** is off.
 - A New workspace card always stays at the end of each monitor's list.
 - Mouse selection, window focusing, drag-and-drop, and multi-monitor layouts.
+- Drag a window from one monitor's Overview onto a workspace on another monitor.
 - Press `Ctrl+Shift+X` in Overview to arm force-kill mode; the cursor is hidden
   and a close icon (`󰅖`) follows the pointer, and clicking a window kills only
   that client. Press `Escape` or right-click to cancel without killing anything.
@@ -42,10 +49,31 @@ Overview Workspaces has been approved and verified in the Omarchy plugin marketp
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/iamcheyan/omarchy-overview-workspaces.git --enable
+omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --enable
 ```
 
 After enabling, the plugin registers its Hyprland bindings automatically. Users do not need to edit `~/.config/hypr/bindings.lua`.
+
+### Switching from Overview Workspaces
+
+Panorama has its own plugin id (`ranu.panorama`), so `plugin add` installs it
+next to Overview Workspaces instead of replacing it, and both would fight over
+the same Win/Super bindings. Remove the original first, then add Panorama:
+
+```sh
+omarchy plugin remove hancore.overview-workspaces
+omarchy plugin add https://github.com/elranu/omarchy-overview-workspaces.git --enable
+omarchy restart shell
+```
+
+Settings from the gear panel start from their defaults. To keep the learned
+workspace order, move `~/.local/state/omarchy-overview-workspaces` to
+`~/.local/state/omarchy-panorama` before restarting the shell.
+
+If you run a local copy of this repository under the old id instead, rename its
+folder in `~/.config/omarchy/plugins/` to `ranu.panorama`, change the bar entry id
+in `~/.config/omarchy/shell.json` from `hancore.overview-workspaces` to
+`ranu.panorama`, and restart the shell. That keeps your gear-panel settings.
 
 After updating an existing enabled installation, restart Omarchy Shell once so
 the new keybinding service code replaces the preserved `keepLoaded` instance:
@@ -59,26 +87,23 @@ Hyprland reload as a substitute.
 
 Enabling automatically replaces the built-in workspace indicator; disabling restores it through Omarchy's native replacement mechanism. Older hosts that injected the full shell configuration also retain the legacy duplicate-layout cleanup.
 
-## Ordering modes
+## Workspace ordering
 
-Open the gear button in the top bar to choose a mode.
+Open the gear button in the top bar and use the **Occupied workspaces only**
+toggle. In both states, occupied workspaces follow Windows-style MRU order and
+the New workspace card stays last. The top bar, Overview, and keyboard behavior
+change together.
 
-**Occupied workspaces only**
+**On (default)**
 
-- Workspaces with windows are displayed in Windows-style MRU order.
+- Only workspaces with windows are shown.
 - Win+1 through Win+0 follow those visual slots.
-- The New workspace card always stays last.
-- The top bar and Overview use the same order.
 
-**System native order**
+**Off**
 
-- Keeps occupied workspaces in MRU order while also showing native empty slots.
-- Empty workspaces 1–10 remain visible.
-- Existing workspaces 11, 12, 13, and higher remain visible.
+- Native empty slots 1–10 stay visible, along with existing workspaces 11 and higher.
 - Native IDs are not renumbered.
-- Native Win+number behavior is restored while Overview and Win+Tab remain available.
-
-Changing the mode updates the top bar, Overview, and keyboard behavior together.
+- Native Win+number behavior is restored; Overview and Win+Tab remain available.
 
 ## Search
 
@@ -109,9 +134,9 @@ into the user's Hyprland configuration.
 ## Manual summon and diagnostics
 
 ```sh
-omarchy-shell shell summon hancore.overview-workspaces '{}'
+omarchy-shell shell summon ranu.panorama '{}'
 hyprctl layers | grep -A3 -B2 'quickshell:overview'
-omarchy plugin list --json | jq '.[] | select(.id == "hancore.overview-workspaces")'
+omarchy plugin list --json | jq '.[] | select(.id == "ranu.panorama")'
 ```
 
 ## Project files

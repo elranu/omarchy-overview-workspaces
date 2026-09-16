@@ -553,7 +553,7 @@ Scope {
     }
 
     GlobalShortcut {
-        name: "overviewWorkspacesClose"
+        name: "panoramaClose"
         description: "Closes overview on press"
 
         onPressed: {
@@ -561,7 +561,7 @@ Scope {
         }
     }
     GlobalShortcut {
-        name: "overviewWorkspacesToggle"
+        name: "panoramaToggle"
         description: "Toggles overview on press"
 
         onPressed: {
@@ -571,7 +571,7 @@ Scope {
     property real lastWheelShortcut: 0
 
     GlobalShortcut {
-        name: "overviewNext"
+        name: "panoramaNext"
         description: "Workspace overview: cycle next (Win+Tab)"
         onPressed: {
             GlobalStates.superReleaseMightTrigger = false;
@@ -582,7 +582,7 @@ Scope {
         }
     }
     GlobalShortcut {
-        name: "overviewPrev"
+        name: "panoramaPrev"
         description: "Workspace overview: cycle prev (Win+Shift+Tab)"
         onPressed: {
             GlobalStates.superReleaseMightTrigger = false;
@@ -593,7 +593,7 @@ Scope {
         }
     }
     GlobalShortcut {
-        name: "overviewCommit"
+        name: "panoramaCommit"
         description: "Workspace overview: commit on Win release"
         onPressed: {
             GlobalStates.superReleaseMightTrigger = false;
@@ -602,52 +602,52 @@ Scope {
     }
 
     GlobalShortcut {
-        name: "workspaceSlot1"
+        name: "panoramaSlot1"
         description: "Focus Overview workspace slot 1"
         onPressed: overviewScope.focusWorkspaceSlot(1)
     }
     GlobalShortcut {
-        name: "workspaceSlot2"
+        name: "panoramaSlot2"
         description: "Focus Overview workspace slot 2"
         onPressed: overviewScope.focusWorkspaceSlot(2)
     }
     GlobalShortcut {
-        name: "workspaceSlot3"
+        name: "panoramaSlot3"
         description: "Focus Overview workspace slot 3"
         onPressed: overviewScope.focusWorkspaceSlot(3)
     }
     GlobalShortcut {
-        name: "workspaceSlot4"
+        name: "panoramaSlot4"
         description: "Focus Overview workspace slot 4"
         onPressed: overviewScope.focusWorkspaceSlot(4)
     }
     GlobalShortcut {
-        name: "workspaceSlot5"
+        name: "panoramaSlot5"
         description: "Focus Overview workspace slot 5"
         onPressed: overviewScope.focusWorkspaceSlot(5)
     }
     GlobalShortcut {
-        name: "workspaceSlot6"
+        name: "panoramaSlot6"
         description: "Focus Overview workspace slot 6"
         onPressed: overviewScope.focusWorkspaceSlot(6)
     }
     GlobalShortcut {
-        name: "workspaceSlot7"
+        name: "panoramaSlot7"
         description: "Focus Overview workspace slot 7"
         onPressed: overviewScope.focusWorkspaceSlot(7)
     }
     GlobalShortcut {
-        name: "workspaceSlot8"
+        name: "panoramaSlot8"
         description: "Focus Overview workspace slot 8"
         onPressed: overviewScope.focusWorkspaceSlot(8)
     }
     GlobalShortcut {
-        name: "workspaceSlot9"
+        name: "panoramaSlot9"
         description: "Focus Overview workspace slot 9"
         onPressed: overviewScope.focusWorkspaceSlot(9)
     }
     GlobalShortcut {
-        name: "workspaceSlot10"
+        name: "panoramaSlot10"
         description: "Focus Overview workspace slot 10"
         onPressed: overviewScope.focusWorkspaceSlot(10)
     }

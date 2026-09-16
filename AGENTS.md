@@ -1,4 +1,4 @@
-# hancore.overview-workspaces maintenance rules
+# ranu.panorama maintenance rules
 
 ## Never call `hyprctl reload` from the plugin lifecycle
 

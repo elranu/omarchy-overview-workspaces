@@ -95,7 +95,7 @@ Item {
         // closes without a vendor-specific wrapper binary.
         Quickshell.execDetached([
             "xdg-terminal-exec",
-            "--app-id=hancore.overview-workspaces.command",
+            "--app-id=ranu.panorama.command",
             "--title=Overview Command",
             "--hold",
             "-e",

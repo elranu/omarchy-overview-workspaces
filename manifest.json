@@ -1,24 +1,28 @@
 {
   "schemaVersion": 1,
-  "id": "hancore.overview-workspaces",
-  "name": "Overview Workspaces",
-  "version": "0.1.10",
-  "author": "HANCORE",
+  "id": "ranu.panorama",
+  "name": "Panorama",
+  "version": "0.2.0",
+  "author": "elranu",
   "license": "MIT",
-  "description": "Omarchy workspace experience enhancement with live thumbnails, Windows-style MRU ordering, drag-and-drop, and automatic Win-key integration.",
+  "description": "Multi-monitor workspace overview for Omarchy: live thumbnails, drag windows across workspaces and monitors, MRU ordering, search, and automatic Win-key integration.",
   "keepLoaded": true,
   "omarchy": {
     "clonedFrom": "omarchy.workspaces"
   },
-  "kinds": ["panel", "bar-widget", "service"],
+  "kinds": [
+    "panel",
+    "bar-widget",
+    "service"
+  ],
   "entryPoints": {
     "panel": "Overview.qml",
     "barWidget": "bar/widget.qml",
     "service": "KeybindingService.qml"
   },
   "barWidget": {
-    "displayName": "Workspace ordering",
-    "description": "Choose occupied workspaces only (recommended) or show native empty slots 1–10. Occupied workspaces follow MRU order in both modes, and New workspace stays last.",
+    "displayName": "Panorama workspaces",
+    "description": "Workspace buttons that follow MRU order. Turn \"Occupied workspaces only\" off to also show native empty slots 1–10; New workspace stays last.",
     "category": "Desktop",
     "allowMultiple": false,
     "defaultSection": "left"

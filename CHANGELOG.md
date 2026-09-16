@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0
+
+- Forked from Overview Workspaces and renamed to Panorama, with plugin id
+  `ranu.panorama`. Quickshell global shortcuts, the Super-key Lua listener, and
+  the state directory were renamed to match, so they cannot collide with the
+  original plugin.
+- Windows can be dragged from one monitor's Overview onto a workspace on another
+  monitor.
+- Workspace ordering is now a single **Occupied workspaces only** on/off toggle.
+  The stored `sortMode` values are unchanged.
+- Removed the Chinese and Japanese documentation; the repository is English-only.
+
 ## 0.1.10
 
 - Use one Windows-style MRU order for the Overview grid, top-bar workspace

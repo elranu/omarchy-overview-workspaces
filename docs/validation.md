@@ -1,9 +1,9 @@
-# Overview Workspaces validation procedure
+# Panorama validation procedure
 
 This is the fixed acceptance checklist to run after every change to the plugin.
 It covers static checks, automated tests, Shell runtime checks, and Overview
 interaction checks. Run all commands from the plugin directory
-`hancore.overview-workspaces/`.
+`ranu.panorama/`.
 
 ## 1. Before changing anything
 
@@ -48,7 +48,7 @@ fi
 ```sh
 OMARCHY_SHELL_IPC_TIMEOUT=1s omarchy-shell shell ping
 OMARCHY_SHELL_IPC_TIMEOUT=1s omarchy plugin list --json \
-  | jq '.[] | select(.id == "hancore.overview-workspaces")'
+  | jq '.[] | select(.id == "ranu.panorama")'
 
 pid=$(pgrep -f '^quickshell -n -p ' | head -n1)
 ps -p "$pid" -o pid,ppid,stat,etime,pcpu,pmem,cmd
@@ -58,7 +58,7 @@ hyprctl layers
 Acceptance criteria:
 
 - Shell ping returns `ok`.
-- The overview plugin is `enabled: true`.
+- The plugin is `enabled: true`.
 - `hyprctl layers` contains `namespace: omarchy-bar`.
 - The Quickshell process exists and stays running. A short CPU spike after
   startup is fine, but after about 30 seconds it must not keep climbing or stop
@@ -71,10 +71,10 @@ confirmed by hand:
 
 ```sh
 OMARCHY_SHELL_IPC_TIMEOUT=1s \
-  omarchy-shell shell summon hancore.overview-workspaces '{}'
+  omarchy-shell shell summon ranu.panorama '{}'
 hyprctl layers | rg 'omarchy-bar|quickshell:overview'
 OMARCHY_SHELL_IPC_TIMEOUT=1s \
-  omarchy-shell shell hide hancore.overview-workspaces
+  omarchy-shell shell hide ranu.panorama
 ```
 
 In the top-bar overview workspace area, confirm each of these:
@@ -99,11 +99,11 @@ for n in 1 2 3 4 5; do
   timeout 35s omarchy restart shell
   OMARCHY_SHELL_IPC_TIMEOUT=1s omarchy-shell shell ping
   OMARCHY_SHELL_IPC_TIMEOUT=1s \
-    omarchy-shell shell summon hancore.overview-workspaces '{}'
+    omarchy-shell shell summon ranu.panorama '{}'
   sleep 1
   hyprctl layers | rg -q 'namespace: quickshell:overview'
   OMARCHY_SHELL_IPC_TIMEOUT=1s \
-    omarchy-shell shell hide hancore.overview-workspaces
+    omarchy-shell shell hide ranu.panorama
   sleep 1
 done
 ```
@@ -152,14 +152,14 @@ to terminate only the current Quickshell child process and let
 To confirm whether the overview plugin is the cause, temporarily run:
 
 ```sh
-omarchy plugin disable hancore.overview-workspaces
+omarchy plugin disable ranu.panorama
 timeout 35s omarchy restart shell
 ```
 
 Always restore it once isolation testing is done:
 
 ```sh
-omarchy plugin enable hancore.overview-workspaces left
+omarchy plugin enable ranu.panorama left
 timeout 35s omarchy restart shell
 ```
 

@@ -9,7 +9,7 @@ const configuredMode = context.configuredOverviewMode;
 const legacyShellConfig = context.legacyShellConfig;
 const requiresNativeRestore = context.requiresNativeWorkspaceNumberRestore;
 const native = 'omarchy.workspaces';
-const overview = 'hancore.overview-workspaces';
+const overview = 'ranu.panorama';
 
 test('declares native replacement for install and disable lifecycle', () => {
     assert.equal(require('../manifest.json').omarchy.clonedFrom, native);
@@ -94,9 +94,9 @@ test('QML listens to both scoped and legacy config signals without warnings', ()
     assert.match(source, /function onShellConfigChanged\(\)/);
     assert.match(source, /transitionScript\(root\.appliedMode, mode\)/);
     assert.match(source, /requiresNativeWorkspaceNumberRestore\(previousMode, nextMode\)/);
-    assert.equal((source.match(/hancoreOverviewSuperListener:remove\(\)/g) ?? []).length, 2);
-    assert.match(source, /hancoreOverviewSuperListener = nil/);
-    assert.match(source, /hancoreOverviewSuperDown = nil/);
+    assert.equal((source.match(/panoramaSuperListener:remove\(\)/g) ?? []).length, 2);
+    assert.match(source, /panoramaSuperListener = nil/);
+    assert.match(source, /panoramaSuperDown = nil/);
     assert.doesNotMatch(source, /hyprctl[^\n]*reload|reload[^\n]*hyprctl/);
 });
 test('guards the binding transaction against its own configreloaded event', () => {
