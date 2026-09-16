@@ -1,16 +1,16 @@
 # Panorama
 
+**Press Win/Super to open the Overview on every monitor.**
+
 ![Panorama open on two monitors](preview.png)
 
-*Press Win/Super to open the Overview on every monitor.*
+**Drag windows between workspaces, including onto another monitor.**
 
 ![Dragging windows between monitors](docs/media/drag-between-monitors.gif)
 
-*Drag windows between workspaces, including onto another monitor.*
+**Navigate with the arrow keys and type to search apps, open windows, and Omarchy menu actions.**
 
 ![Keyboard navigation and search](docs/media/keyboard-and-search.gif)
-
-*Navigate with the arrow keys and type to search apps, open windows, and Omarchy menu actions.*
 
 Panorama is a multi-monitor workspace overview for Omarchy. It provides a full-screen overview on every monitor with live window previews, wallpaper-backed workspace cards, MRU workspace ordering, drag-and-drop between workspaces and monitors, search, and automatic keyboard integration.
 
