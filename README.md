@@ -71,8 +71,8 @@ omarchy restart shell
 ```
 
 Settings from the gear panel start from their defaults. To keep the learned
-workspace order, move `~/.local/state/omarchy-overview-workspaces` to
-`~/.local/state/omarchy-panorama` before restarting the shell.
+workspace order, move `omarchy-overview-workspaces` to `omarchy-panorama` inside
+`${XDG_STATE_HOME:-$HOME/.local/state}` before restarting the shell.
 
 If you run a local copy of this repository under the old id instead, rename its
 folder in `~/.config/omarchy/plugins/` to `ranu.panorama`, change the bar entry id
@@ -100,7 +100,7 @@ omarchy restart shell
 
 Removing the plugin unregisters its runtime bindings and restores Omarchy's
 native workspace indicator and workspace shortcuts. Optionally delete its saved
-workspace order with `rm -rf ~/.local/state/omarchy-panorama`.
+workspace order with `rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-panorama"`.
 
 ## Workspace ordering
 
