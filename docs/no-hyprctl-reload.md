@@ -1,4 +1,4 @@
-# ranu.panorama maintenance rules
+# Maintenance rule: never reload Hyprland from the plugin
 
 ## Never call `hyprctl reload` from the plugin lifecycle
 

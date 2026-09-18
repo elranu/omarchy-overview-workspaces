@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Renamed `AGENTS.md` to `docs/no-hyprctl-reload.md`. The file is installed with
+  the plugin, and coding agents read a root `AGENTS.md` as instructions.
+- Pinned the GitHub Actions in the test workflow to full commit SHAs and gave
+  the workflow an explicit `contents: read` permission.
+
 ## 0.2.0
 
 - Forked from Overview Workspaces and renamed to Panorama, with plugin id
