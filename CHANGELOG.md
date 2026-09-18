@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1
 
 - Renamed `AGENTS.md` to `docs/no-hyprctl-reload.md`. The file is installed with
   the plugin, and coding agents read a root `AGENTS.md` as instructions.
